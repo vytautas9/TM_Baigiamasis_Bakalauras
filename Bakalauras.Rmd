@@ -1,0 +1,2043 @@
+---
+title: "Bakalauras"
+author: "Vytautas Kraujalis"
+date: '2021-01-26'
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Duomenų nuskaitymas ir sutvarkymas
+```{r}
+# Biblioteka sas duomenų failo nuskaitymui
+library(haven)
+# Biblioteka duomenų tvarkymui
+library(dplyr)
+
+# Nuskaitome pradinius duomenis iš sas failo
+pradiniai_duomenys <- read_sas("C:\\Users\\vytau\\Desktop\\Bakalauras\\Destytojo atsiusti\\1_mail_visi_csm.sas7bdat")
+
+# Pasižiūrime į pirmus 3 stebėjimus
+head(pradiniai_duomenys, 3)
+
+# Pasižiūrime turimos duomenų imties stasitikas
+summary(pradiniai_duomenys)
+
+# Atsifiltruojam tik eilutes, kurios turi praleistą reikšmę
+praleistos_reiksmes <- pradiniai_duomenys[rowSums(is.na(pradiniai_duomenys)) > 0, ]
+
+# Pasižiūrim stebėjimus su praleistomis reikšmėmis
+praleistos_reiksmes
+
+# Sutvarkom duomenų imtį
+sutvarkyti_duomenys <- pradiniai_duomenys %>%
+  # Pašalinam stebėjimus su praleistomis reikšmėmis
+  filter(!(numeris %in% praleistos_reiksmes$numeris)) %>%
+  # Sutvarkome kategorinių duomenų koduotes
+  mutate(
+    GLpoRP_ISUP = as.factor(GLpoRP_ISUP),
+    pT = as.factor(pT),
+    LNI01 = as.factor(LNI01),
+    R1 = as.factor(R1),
+    OS = as.factor(OS),
+    CSS = as.factor(CSS),
+    Death_other_causes = as.factor(Death_other_causes),
+    Survival_years = SURVIVAL / 12 # Naujas kintamasis, kuris nurodo išgyvenimo trukmę metų skalėje
+  ) %>%
+  # Pašalinam nereikalingus kintamuosius
+  dplyr::select(-SURVIVAL,-Age64vs65,-pT2_3a_vs_pT3b_4)
+```
+
+# Kuriame aprašomąją statistinę lentelę
+```{r}
+# Biblioteka, reikalinga aprašomosios statistinės lentelės sukūrimui
+library(arsenal)
+
+Lentele <- sutvarkyti_duomenys %>%
+  mutate(
+    GLpoRP_ISUP = plyr::revalue(
+      factor(GLpoRP_ISUP),
+      c(
+        "1" = "1, GS (<=6)",
+        "2" = "2, GS (3+4)",
+        "3" = "3, GS (4+3)",
+        "4" = "4, GS (=8)",
+        "5" = "5, GS (>=9)"
+      )
+    ),
+    pT = plyr::revalue(
+      factor(pT),
+      c("0" = "0, pradine stadija, vezys nematomas is tomografijos",
+        "1" = "1, vezys formuojasi prostatos srityje",
+        "2" = "2, vezys issipletes uz prostatos ribu")
+    ),
+    LNI01 = plyr::revalue(
+      factor(LNI01),
+      c("0" = "0, limfmazgiai svarus",
+        "1" = "1, limfmazgiai pazeisti veziu",
+        "2" = "2, limfmazgiai nesalinti arba negalima nustatyti")
+    ),
+    R1 = plyr::revalue(
+      factor(R1),
+      c("0" = "0, chirurginiai pasalintos prostatos krastai svarus",
+        "1" = "1, chirurginiai pasalintos prostatos krastai pazeisti veziu",
+        "2" = "2, nera aisku")
+    ),
+    OS = plyr::revalue(factor(OS), c("0" = "0, death not observed",
+                                     "1" = "1, death")),
+    CSS = plyr::revalue(
+      factor(CSS),
+      c("0" = "0, no death by cancer",
+        "1" = "1, death by cancer")
+    ),
+    Death_other_causes = plyr::revalue(
+      factor(Death_other_causes),
+      c("0" = "0, no death by other causes",
+        "1" = "1, death by other causes")
+    )
+  ) %>%
+  select(-numeris)
+
+my_controls <- tableby.control(
+  test = T,
+  total = F,
+  numeric.test = "kwt",
+  cat.test = "chisq",
+  numeric.stats = c("median", "q1q3", "range"),
+  cat.stats = c("countpct"),
+  stats.labels = list(
+    median = "Mediana",
+    q1q3 = "1 kvantilis - 3 kvantilis",
+    range = "Min - Max"
+  )
+)
+my_labels <- list(
+  pT = "pT, Patologine stadija",
+  PSAI = "PSA, Prostatos specifiniai antigenai",
+  GLpoRP_ISUP = "GLpoRP_ISUP, Sugrupuotos Gleason grupes pagal ISUP",
+  LNI01 = "LNI0.1, Limfmazgiu bukle",
+  Amzius = "Amzius, Paciento amzius",
+  Survival_years = "Survival_years, Metu skaicius iki mirties arba paskutinio apsilankymo"
+)
+
+table_one <- tableby(~ .,
+                     data = Lentele,
+                     control = my_controls)
+
+table_summary <- summary(
+  table_one,
+  labelTranslations = my_labels,
+  pfootnote = TRUE,
+  digits = 2,
+  digits.pct = 1
+)
+
+write2word(
+  table_summary,
+  "C:\\Users\\vytau\\Desktop\\Bakalauras\\Analize\\Lentele.doc",
+  title = "My table in Word"
+)
+
+knitr::kable(table_summary)
+
+```
+
+# Duomenų vizualizavimas
+```{r}
+# Biblioteka duomenų vizualizacijų pateikimui
+library(ggplot2)
+# Biblioteka vizualizacijų apjungimui
+library(ggpubr)
+# Biblioteka išgyvenimo funkcijoms
+library(survival)
+# Biblioteka išgyvenimo funkcijų atvaizdavimui
+library(survminer)
+
+Vizualizaciju_Aplankas <-
+  "C:\\Users\\vytau\\Desktop\\Bakalauras\\Analize\\Vizualizacijos"
+
+
+###############################################################################
+# Kuriame tankio vizualizaciją ir statistines lenteles
+###############################################################################
+Statistine_Lentele <-
+  function(Duomenys,
+           Tolydusis_Kintamasis,
+           Kategorinis_Kintamasis) {
+    desc_statby(Duomenys, measure.var = Tolydusis_Kintamasis, grps = Kategorinis_Kintamasis) %>%
+      mutate(Kintamasis = Tolydusis_Kintamasis) %>%
+      dplyr::select(Kintamasis, 1, length, min, max, mean, median, sd) %>%
+      rename(
+        N = length,
+        `Min.` = min,
+        `Max.` = max,
+        `Vid.` = mean,
+        `Mediana` = median,
+        SD = sd
+      ) %>%
+      mutate(across(where(is.numeric), round, 2))
+  }
+
+Tankio_Vizualizacija <-
+  function(Duomenys,
+           Tolydusis_Kintamasis,
+           Kategorinis_Kintamasis,
+           xlab,
+           ylab) {
+    ggdensity(Duomenys,
+              x = Tolydusis_Kintamasis,
+              fill = Kategorinis_Kintamasis,
+              palette = "lancet") +
+      xlab(xlab) +
+      ylab(ylab) +
+      theme(
+        axis.text.x = element_text(size = 13),
+        axis.text.y = element_text(size = 13),
+        axis.title.x = element_text(size = 16),
+        axis.title.y = element_text(size = 16)
+      )
+  }
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+
+###############################################################################
+# Amžiaus ir PSA tankio vizualizacijos ir statistinė lentelės pagal 
+# kategorinius kintamuosius
+###############################################################################
+# Patologinė stadija
+Amzius_pT_lentele <-
+  Statistine_Lentele(sutvarkyti_duomenys, "Amzius", "pT")
+Amzius_pT_density <-
+  Tankio_Vizualizacija(sutvarkyti_duomenys, "Amzius", "pT", "Amžius", "Tankis")
+PSA_pT_lentele <-
+  Statistine_Lentele(sutvarkyti_duomenys, "PSAI", "pT")
+PSA_pT_density <-
+  Tankio_Vizualizacija(sutvarkyti_duomenys,
+                       "PSAI",
+                       "pT",
+                       "PSA, prostatos specifiniai antigenai",
+                       "Tankis")
+
+pT_density <-
+  ggarrange(Amzius_pT_density,
+            PSA_pT_density,
+            ncol = 2,
+            nrow = 1)
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\Amzius_PSA_pT_density.png"),
+  plot = pT_density,
+  width = 14,
+  height = 8
+)
+pT_Lentele <- Amzius_pT_lentele
+pT_Lentele[nrow(pT_Lentele) + 1,] <- NA
+pT_Lentele <- pT_Lentele %>% bind_rows(PSA_pT_lentele)
+knitr::kable(pT_Lentele, caption = "pT pagal Amžių ir PSA")
+# Chirurginių pašalintų prostatos kraštų būklė
+Amzius_R1_lentele <-
+  Statistine_Lentele(sutvarkyti_duomenys, "Amzius", "R1")
+Amzius_R1_density <-
+  Tankio_Vizualizacija(sutvarkyti_duomenys, "Amzius", "R1", "Amžius", "Tankis")
+PSA_R1_lentele <-
+  Statistine_Lentele(sutvarkyti_duomenys, "PSAI", "R1")
+PSA_R1_density <-
+  Tankio_Vizualizacija(sutvarkyti_duomenys,
+                       "PSAI",
+                       "R1",
+                       "PSA, prostatos specifiniai antigenai",
+                       "Tankis")
+
+R1_density <-
+  ggarrange(Amzius_R1_density,
+            PSA_R1_density,
+            ncol = 2,
+            nrow = 1)
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\Amzius_PSA_R1_density.png"),
+  plot = R1_density,
+  width = 14,
+  height = 8
+)
+R1_Lentele <- Amzius_R1_lentele
+R1_Lentele[nrow(R1_Lentele) + 1,] <- NA
+R1_Lentele <- R1_Lentele %>% bind_rows(PSA_R1_lentele)
+knitr::kable(R1_Lentele, caption = "R1 pagal Amžių ir PSA")
+# Limfmazgių būklė
+Amzius_LNI01_lentele <-
+  Statistine_Lentele(sutvarkyti_duomenys, "Amzius", "LNI01")
+Amzius_LNI01_density <-
+  Tankio_Vizualizacija(sutvarkyti_duomenys, "Amzius", "LNI01", "Amžius", "Tankis")
+PSA_LNI01_lentele <-
+  Statistine_Lentele(sutvarkyti_duomenys, "PSAI", "LNI01")
+PSA_LNI01_density <-
+  Tankio_Vizualizacija(
+    sutvarkyti_duomenys,
+    "PSAI",
+    "LNI01",
+    "PSA, prostatos specifiniai antigenai",
+    "Tankis"
+  )
+
+LNI01_density <-
+  ggarrange(Amzius_LNI01_density,
+            PSA_LNI01_density,
+            ncol = 2,
+            nrow = 1)
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\Amzius_PSA_LNI01_density.png"),
+  plot = LNI01_density,
+  width = 14,
+  height = 8
+)
+LNI01_Lentele <- Amzius_LNI01_lentele
+LNI01_Lentele[nrow(LNI01_Lentele) + 1,] <- NA
+LNI01_Lentele <- LNI01_Lentele %>% bind_rows(PSA_LNI01_lentele)
+knitr::kable(LNI01_Lentele, caption = "LNI01 pagal Amžių ir PSA")
+# Limfmazgių skaičius
+Amzius_GLpoRPISUP_lentele <-
+  Statistine_Lentele(sutvarkyti_duomenys, "Amzius", "GLpoRP_ISUP")
+Amzius_GLpoRPISUP_density <-
+  Tankio_Vizualizacija(sutvarkyti_duomenys,
+                       "Amzius",
+                       "GLpoRP_ISUP",
+                       "Amžius",
+                       "Tankis")
+PSA_GLpoRPISUP_lentele <-
+  Statistine_Lentele(sutvarkyti_duomenys, "PSAI", "GLpoRP_ISUP")
+PSA_GLpoRPISUP_density <-
+  Tankio_Vizualizacija(
+    sutvarkyti_duomenys,
+    "PSAI",
+    "GLpoRP_ISUP",
+    "PSA, prostatos specifiniai antigenai",
+    "Tankis"
+  )
+
+GLpoRPISUP_density <-
+  ggarrange(
+    Amzius_GLpoRPISUP_density,
+    PSA_GLpoRPISUP_density,
+    ncol = 2,
+    nrow = 1
+  )
+ggsave(
+  paste0(
+    Vizualizaciju_Aplankas,
+    "\\Amzius_PSA_GLpoRPISUP_density.png"
+  ),
+  plot = GLpoRPISUP_density,
+  width = 14,
+  height = 8
+)
+GLpoRPISUP_Lentele <- Amzius_GLpoRPISUP_lentele
+GLpoRPISUP_Lentele[nrow(GLpoRPISUP_Lentele) + 1,] <- NA
+GLpoRPISUP_Lentele <-
+  GLpoRPISUP_Lentele %>% bind_rows(PSA_GLpoRPISUP_lentele)
+knitr::kable(GLpoRPISUP_Lentele, caption = "GLpoRPISUP pagal Amžių ir PSA")
+###############################################################################
+###############################################################################
+###############################################################################
+
+# Pasižiūrim, ar yra vizuali priklausomybė tarp Amžiaus ir PSA
+Amzius_PSA_scatter <-
+  ggplot(sutvarkyti_duomenys, aes(x = Amzius, y = PSAI)) +
+  geom_point(colour = "black") +
+  theme_minimal() +
+  xlab("Amžius") +
+  ylab("PSA, Prostatos specifiniai antigenai") +
+  theme(
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16)
+  )
+
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\Amzius_PSA_scatter.png"),
+  plot = Amzius_PSA_scatter,
+  width = 14,
+  height = 8
+)
+
+
+# Sudarom stebėjimo laiko histrogramą
+Stebejimo_Laiko_histograma <-
+  ggplot(sutvarkyti_duomenys, aes(x = Survival_years)) +
+  geom_histogram(colour = "black", breaks = seq(0, 18, by = 1)) +
+  theme_minimal() +
+  xlab("Stebėjimo laikas (metais)") +
+  ylab("Kiekis") +
+  theme(
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16)
+  )
+
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\Stebejimo_Laiko_histograma.png"),
+  plot = Stebejimo_Laiko_histograma,
+  width = 14,
+  height = 8
+)
+```
+
+# Išgyvenamumo funkcijos
+```{r}
+Mirtingumas_nuo_prostatos_vėžio <-
+  survfit(
+    Surv(Survival_years, CSS) ~ 1,
+    data = sutvarkyti_duomenys %>%
+      mutate_if(is.factor, ~ as.numeric(as.character(.x))),
+    conf.int = 0.99
+  )
+Mirtingumas_nuo_kitų_priežasčių  <-
+  survfit(
+    Surv(Survival_years, Death_other_causes) ~ 1,
+    data = sutvarkyti_duomenys %>%
+      mutate_if(is.factor, ~ as.numeric(as.character(.x))),
+    conf.int = 0.99
+  )
+
+
+fit <-
+  list(
+    Mirtingumas_nuo_prostatos_vėžio = Mirtingumas_nuo_prostatos_vėžio,
+    Mirtingumas_nuo_kitų_priežasčių  = Mirtingumas_nuo_kitų_priežasčių
+  )
+KMSA_bendras_CSS_vs_DOS <-
+  ggsurvplot_combine(
+    fit,
+    data = sutvarkyti_duomenys %>%
+      mutate_if(is.factor, ~ as.numeric(as.character(.x))),
+    palette = "lancet",
+    risk.table = F,
+    tables.col = "strata",
+    tables.theme = theme_cleantable(),
+    xlab = "Stebėjimo laikas (metais)",
+    ylab = "Išgyvenimo tikimybė",
+    pval = TRUE,
+    pval.method = TRUE,
+    font.x = 16,
+    font.y = 16,
+    font.tickslab = 14,
+    font.legend = 14
+  )
+
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\KMSA_bendras_CSS_vs_DOS.png"),
+  plot = KMSA_bendras_CSS_vs_DOS$plot,
+  width = 15,
+  height = 8
+)
+
+# Apsirašom funkciją, kurią naudosim išgyvenamumo statistikoms ištraukti
+lenteles_uzpildymo_funkcija <-
+  function(fit, laiko_momentas, mirties_priezastis) {
+    fit_summ <- summary(fit, times = laiko_momentas)
+    lentele <- data.frame(
+      Mirties_priezastis = rep(mirties_priezastis, times = length(fit_summ$strata)),
+      Laiko_momentas = rep(laiko_momentas, times = length(fit_summ$strata)),
+      Kintamasis = fit_summ$strata,
+      Isgyvenamumo_tikimybe = fit_summ$surv,
+      PI_apatinis = fit_summ$lower,
+      PI_virsutinis = fit_summ$upper
+      
+    )
+    return(lentele)
+  }
+
+Bendra_lentele <- NULL
+
+###############################################################################
+# Prostato vėžio išgyvenimo funkcijos pagal pT
+###############################################################################
+# Susigeneruojame išgyvenimo funkcijas
+fit <-
+  survfit(
+    Surv(Survival_years, CSS) ~ Patologinė_stadija,
+    data = sutvarkyti_duomenys %>%
+      mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+      rename(Patologinė_stadija = pT),
+    conf.int = 0.99
+  )
+
+Bendra_lentele <- lenteles_uzpildymo_funkcija(fit, 5, "CSS") %>%
+  bind_rows(lenteles_uzpildymo_funkcija(fit, 10, "CSS"))
+
+# Tikriname skirtumą tarp grupių
+survdiff(
+  Surv(Survival_years, CSS) ~ Patologinė_stadija,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(Patologinė_stadija = pT)
+)
+
+# Išgyvenimo funkciją pateikiame vizualizacijoje
+ggsurv <-  ggsurvplot(
+  fit,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(Patologinė_stadija = pT),
+  palette = "lancet",
+  risk.table = TRUE,
+  risk.table.title = "Pacientų sk. rizikoje",
+  tables.col = "strata",
+  tables.theme = theme_cleantable(),
+  xlab = "Stebėjimo laikas (metais)",
+  ylab = "Išgyvenimo tikimybė",
+  pval = TRUE,
+  pval.method = TRUE,
+  font.x = 16,
+  font.y = 16,
+  font.tickslab = 14,
+  font.legend = 14,
+  risk.table.fontsize = 8
+)
+ggsurv$table <- ggsurv$table +
+  theme(axis.ticks.y = element_blank(),
+        legend.position = "none")
+
+KMSA_pT_CSS <-
+  ggarrange(
+    ggsurv$plot,
+    ggsurv$table,
+    heights = c(2, 0.7),
+    ncol = 1,
+    nrow = 2,
+    align = "v"
+  )
+
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\KMSA_pT_CSS.png"),
+  plot = KMSA_pT_CSS,
+  width = 15,
+  height = 8
+)
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+###############################################################################
+# Prostato vėžio išgyvenimo funkcijos pagal LNI01
+###############################################################################
+# Susigeneruojame išgyvenimo funkcijas
+fit <-
+  survfit(
+    Surv(Survival_years, CSS) ~ Limfmazgių_būklė,
+    data = sutvarkyti_duomenys %>%
+      mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+      rename(Limfmazgių_būklė  = LNI01),
+    conf.int = 0.99
+  )
+
+Bendra_lentele <- Bendra_lentele %>%
+  bind_rows(
+    lenteles_uzpildymo_funkcija(fit, 5, "CSS"),
+    lenteles_uzpildymo_funkcija(fit, 10, "CSS")
+  )
+
+# Tikriname skirtumą tarp grupių
+survdiff(
+  Surv(Survival_years, CSS) ~ Limfmazgių_būklė,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(Limfmazgių_būklė  = LNI01)
+)
+# Išgyvenimo funkciją pateikiame vizualizacijoje
+ggsurv <-  ggsurvplot(
+  fit,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(Limfmazgių_būklė  = LNI01),
+  palette = "lancet",
+  risk.table = TRUE,
+  risk.table.title = "Pacientų sk. rizikoje",
+  tables.col = "strata",
+  tables.theme = theme_cleantable(),
+  xlab = "Stebėjimo laikas (metais)",
+  ylab = "Išgyvenimo tikimybė",
+  pval = TRUE,
+  pval.method = TRUE,
+  font.x = 16,
+  font.y = 16,
+  font.tickslab = 14,
+  font.legend = 14,
+  risk.table.fontsize = 8
+)
+ggsurv$table <- ggsurv$table +
+  theme(axis.ticks.y = element_blank(),
+        legend.position = "none")
+
+KMSA_LNI01_CSS <-
+  ggarrange(
+    ggsurv$plot,
+    ggsurv$table,
+    heights = c(2, 0.7),
+    ncol = 1,
+    nrow = 2,
+    align = "v"
+  )
+
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\KMSA_LNI01_CSS.png"),
+  plot = KMSA_LNI01_CSS,
+  width = 15,
+  height = 8
+)
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+###############################################################################
+# Prostato vėžio išgyvenimo funkcijos pagal R1
+###############################################################################
+# Susigeneruojame išgyvenimo funkcijas
+fit <-
+  survfit(
+    Surv(Survival_years, CSS) ~ Pašalintų_kraštų_būklė,
+    data = sutvarkyti_duomenys %>%
+      mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+      rename(Pašalintų_kraštų_būklė  = R1),
+    conf.int = 0.99
+  )
+
+Bendra_lentele <- Bendra_lentele %>%
+  bind_rows(
+    lenteles_uzpildymo_funkcija(fit, 5, "CSS"),
+    lenteles_uzpildymo_funkcija(fit, 10, "CSS")
+  )
+
+# Tikriname skirtumą tarp grupių
+survdiff(
+  Surv(Survival_years, CSS) ~ Pašalintų_kraštų_būklė,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(Pašalintų_kraštų_būklė  = R1)
+)
+# Išgyvenimo funkciją pateikiame vizualizacijoje
+ggsurv <-  ggsurvplot(
+  fit,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(Pašalintų_kraštų_būklė  = R1),
+  palette = "lancet",
+  risk.table = TRUE,
+  risk.table.title = "Pacientų sk. rizikoje",
+  tables.col = "strata",
+  tables.theme = theme_cleantable(),
+  xlab = "Stebėjimo laikas (metais)",
+  ylab = "Išgyvenimo tikimybė",
+  pval = TRUE,
+  pval.method = TRUE,
+  font.x = 16,
+  font.y = 16,
+  font.tickslab = 14,
+  font.legend = 14,
+  risk.table.fontsize = 8
+)
+ggsurv$table <- ggsurv$table +
+  theme(axis.ticks.y = element_blank(),
+        legend.position = "none")
+
+KMSA_R1_CSS <-
+  ggarrange(
+    ggsurv$plot,
+    ggsurv$table,
+    heights = c(2, 0.7),
+    ncol = 1,
+    nrow = 2,
+    align = "v"
+  )
+
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\KMSA_R1_CSS.png"),
+  plot = KMSA_R1_CSS,
+  width = 15,
+  height = 8
+)
+###############################################################################
+###############################################################################
+###############################################################################
+
+###############################################################################
+# Prostato vėžio išgyvenimo funkcijos pagal GLpoRP_ISUP
+###############################################################################
+# Susigeneruojame išgyvenimo funkcijas
+fit <-
+  survfit(
+    Surv(Survival_years, CSS) ~ Limfmazgių_skaičius,
+    data = sutvarkyti_duomenys %>%
+      mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+      rename(Limfmazgių_skaičius = GLpoRP_ISUP),
+    conf.int = 0.99
+  )
+
+Bendra_lentele <- Bendra_lentele %>%
+  bind_rows(
+    lenteles_uzpildymo_funkcija(fit, 5, "CSS"),
+    lenteles_uzpildymo_funkcija(fit, 10, "CSS")
+  )
+
+# Tikriname skirtumą tarp grupių
+survdiff(
+  Surv(Survival_years, CSS) ~ Limfmazgių_skaičius,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(Limfmazgių_skaičius = GLpoRP_ISUP)
+)
+# Išgyvenimo funkciją pateikiame vizualizacijoje
+ggsurv <-  ggsurvplot(
+  fit,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(Limfmazgių_skaičius = GLpoRP_ISUP),
+  palette = "lancet",
+  risk.table = TRUE,
+  risk.table.title = "Pacientų sk. rizikoje",
+  tables.col = "strata",
+  tables.theme = theme_cleantable(),
+  xlab = "Stebėjimo laikas (metais)",
+  ylab = "Išgyvenimo tikimybė",
+  pval = TRUE,
+  pval.method = TRUE,
+  font.x = 16,
+  font.y = 16,
+  font.tickslab = 14,
+  font.legend = 14,
+  risk.table.fontsize = 8
+)
+ggsurv$table <- ggsurv$table +
+  theme(axis.ticks.y = element_blank(),
+        legend.position = "none")
+
+KMSA_GLpoRPISUP_CSS <-
+  ggarrange(
+    ggsurv$plot,
+    ggsurv$table,
+    heights = c(2, 0.7),
+    ncol = 1,
+    nrow = 2,
+    align = "v"
+  )
+
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\KMSA_GLpoRPISUP_CSS.png"),
+  plot = KMSA_GLpoRPISUP_CSS,
+  width = 15,
+  height = 8
+)
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+###############################################################################
+# Mirties nuo kitų priežasčių išgyvenimo funkcijos pagal pT
+###############################################################################
+# Susigeneruojame išgyvenimo funkcijas
+fit <-
+  survfit(
+    Surv(Survival_years, Death_other_causes) ~ Patologinė_stadija,
+    data = sutvarkyti_duomenys %>%
+      mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+      rename(Patologinė_stadija = pT),
+    conf.int = 0.99
+  )
+
+Bendra_lentele <- Bendra_lentele %>%
+  bind_rows(
+    lenteles_uzpildymo_funkcija(fit, 5, "Death_other_causes"),
+    lenteles_uzpildymo_funkcija(fit, 10, "Death_other_causes")
+  )
+
+# Tikriname skirtumą tarp grupių
+survdiff(
+  Surv(Survival_years, Death_other_causes) ~ Patologinė_stadija,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(Patologinė_stadija = pT)
+)
+# Išgyvenimo funkciją pateikiame vizualizacijoje
+ggsurv <-  ggsurvplot(
+  fit,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(Patologinė_stadija = pT),
+  palette = "lancet",
+  risk.table = TRUE,
+  risk.table.title = "Pacientų sk. rizikoje",
+  tables.col = "strata",
+  tables.theme = theme_cleantable(),
+  xlab = "Stebėjimo laikas (metais)",
+  ylab = "Išgyvenimo tikimybė",
+  pval = TRUE,
+  pval.method = TRUE,
+  font.x = 16,
+  font.y = 16,
+  font.tickslab = 14,
+  font.legend = 14,
+  risk.table.fontsize = 8
+)
+ggsurv$table <- ggsurv$table +
+  theme(axis.ticks.y = element_blank(),
+        legend.position = "none")
+
+KMSA_pT_DOS <-
+  ggarrange(
+    ggsurv$plot,
+    ggsurv$table,
+    heights = c(2, 0.7),
+    ncol = 1,
+    nrow = 2,
+    align = "v"
+  )
+
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\KMSA_pT_DOS.png"),
+  plot = KMSA_pT_DOS,
+  width = 15,
+  height = 8
+)
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+###############################################################################
+# Mirties nuo kitų priežasčių išgyvenimo funkcijos pagal LNI01
+###############################################################################
+# Susigeneruojame išgyvenimo funkcijas
+fit <-
+  survfit(
+    Surv(Survival_years, Death_other_causes) ~ Limfmazgių_būklė,
+    data = sutvarkyti_duomenys %>%
+      mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+      rename(Limfmazgių_būklė  = LNI01),
+    conf.int = 0.99
+  )
+
+Bendra_lentele <- Bendra_lentele %>%
+  bind_rows(
+    lenteles_uzpildymo_funkcija(fit, 5, "Death_other_causes"),
+    lenteles_uzpildymo_funkcija(fit, 10, "Death_other_causes")
+  )
+
+# Tikriname skirtumą tarp grupių
+survdiff(
+  Surv(Survival_years, Death_other_causes) ~ Limfmazgių_būklė,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(Limfmazgių_būklė  = LNI01)
+)
+# Išgyvenimo funkciją pateikiame vizualizacijoje
+ggsurv <-  ggsurvplot(
+  fit,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(Limfmazgių_būklė  = LNI01),
+  palette = "lancet",
+  risk.table = TRUE,
+  risk.table.title = "Pacientų sk. rizikoje",
+  tables.col = "strata",
+  tables.theme = theme_cleantable(),
+  xlab = "Stebėjimo laikas (metais)",
+  ylab = "Išgyvenimo tikimybė",
+  pval = TRUE,
+  pval.method = TRUE,
+  font.x = 16,
+  font.y = 16,
+  font.tickslab = 14,
+  font.legend = 14,
+  risk.table.fontsize = 8
+)
+ggsurv$table <- ggsurv$table +
+  theme(axis.ticks.y = element_blank(),
+        legend.position = "none")
+
+KMSA_LNI01_DOS <-
+  ggarrange(
+    ggsurv$plot,
+    ggsurv$table,
+    heights = c(2, 0.7),
+    ncol = 1,
+    nrow = 2,
+    align = "v"
+  )
+
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\KMSA_LNI01_DOS.png"),
+  plot = KMSA_LNI01_DOS,
+  width = 15,
+  height = 8
+)
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+###############################################################################
+# Mirties nuo kitų priežasčių išgyvenimo funkcijos pagal R1
+###############################################################################
+# Susigeneruojame išgyvenimo funkcijas
+fit <-
+  survfit(
+    Surv(Survival_years, Death_other_causes) ~ Pašalintų_kraštų_būklė,
+    data = sutvarkyti_duomenys %>%
+      mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+      rename(Pašalintų_kraštų_būklė  = R1),
+    conf.int = 0.99
+  )
+
+Bendra_lentele <- Bendra_lentele %>%
+  bind_rows(
+    lenteles_uzpildymo_funkcija(fit, 5, "Death_other_causes"),
+    lenteles_uzpildymo_funkcija(fit, 10, "Death_other_causes")
+  )
+
+# Tikriname skirtumą tarp grupių
+survdiff(
+  Surv(Survival_years, Death_other_causes) ~ Pašalintų_kraštų_būklė,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(Pašalintų_kraštų_būklė  = R1)
+)
+# Išgyvenimo funkciją pateikiame vizualizacijoje
+ggsurv <-  ggsurvplot(
+  fit,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(Pašalintų_kraštų_būklė  = R1),
+  palette = "lancet",
+  risk.table = TRUE,
+  risk.table.title = "Pacientų sk. rizikoje",
+  tables.col = "strata",
+  tables.theme = theme_cleantable(),
+  xlab = "Stebėjimo laikas (metais)",
+  ylab = "Išgyvenimo tikimybė",
+  pval = TRUE,
+  pval.method = TRUE,
+  font.x = 16,
+  font.y = 16,
+  font.tickslab = 14,
+  font.legend = 14,
+  risk.table.fontsize = 8
+)
+ggsurv$table <- ggsurv$table +
+  theme(axis.ticks.y = element_blank(),
+        legend.position = "none")
+
+KMSA_R1_DOS <-
+  ggarrange(
+    ggsurv$plot,
+    ggsurv$table,
+    heights = c(2, 0.7),
+    ncol = 1,
+    nrow = 2,
+    align = "v"
+  )
+
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\KMSA_R1_DOS.png"),
+  plot = KMSA_R1_DOS,
+  width = 15,
+  height = 8
+)
+###############################################################################
+###############################################################################
+###############################################################################
+
+###############################################################################
+# Mirties nuo kitų priežasčių išgyvenimo funkcijos pagal GLpoRP_ISUP
+###############################################################################
+# Susigeneruojame išgyvenimo funkcijas
+fit <-
+  survfit(
+    Surv(Survival_years, Death_other_causes) ~ Limfmazgių_skaičius,
+    data = sutvarkyti_duomenys %>%
+      mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+      rename(Limfmazgių_skaičius = GLpoRP_ISUP),
+    conf.int = 0.99
+  )
+
+Bendra_lentele <- Bendra_lentele %>%
+  bind_rows(
+    lenteles_uzpildymo_funkcija(fit, 5, "Death_other_causes"),
+    lenteles_uzpildymo_funkcija(fit, 10, "Death_other_causes")
+  )
+
+# Tikriname skirtumą tarp grupių
+survdiff(
+  Surv(Survival_years, Death_other_causes) ~ Limfmazgių_skaičius,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(Limfmazgių_skaičius = GLpoRP_ISUP)
+)
+# Išgyvenimo funkciją pateikiame vizualizacijoje
+ggsurv <-  ggsurvplot(
+  fit,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(Limfmazgių_skaičius = GLpoRP_ISUP),
+  palette = "lancet",
+  risk.table = TRUE,
+  risk.table.title = "Pacientų sk. rizikoje",
+  tables.col = "strata",
+  tables.theme = theme_cleantable(),
+  xlab = "Stebėjimo laikas (metais)",
+  ylab = "Išgyvenimo tikimybė",
+  pval = TRUE,
+  pval.method = TRUE,
+  font.x = 16,
+  font.y = 16,
+  font.tickslab = 14,
+  font.legend = 14,
+  risk.table.fontsize = 8
+)
+ggsurv$table <- ggsurv$table +
+  theme(axis.ticks.y = element_blank(),
+        legend.position = "none")
+
+KMSA_GLpoRPISUP_DOS <-
+  ggarrange(
+    ggsurv$plot,
+    ggsurv$table,
+    heights = c(2, 0.7),
+    ncol = 1,
+    nrow = 2,
+    align = "v"
+  )
+
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\KMSA_GLpoRPISUP_DOS.png"),
+  plot = KMSA_GLpoRPISUP_DOS,
+  width = 15,
+  height = 8
+)
+###############################################################################
+###############################################################################
+###############################################################################
+
+# 5 ir 10 metų išgyvenamumo tikimybės
+knitr::kable(
+  Bendra_lentele %>%
+    mutate_if(is.numeric, round, 3) %>%
+    mutate_at(c("Isgyvenamumo_tikimybe", "PI_apatinis", "PI_virsutinis"), function(x) {
+      paste0(x * 100, "%")
+    }) %>%
+    mutate(PI = paste0("(", PI_apatinis, " - ", PI_virsutinis, ")")) %>%
+    select(-PI_apatinis,-PI_virsutinis)
+)
+```
+
+# Polinkio analizė
+```{r}
+# Biblioteka, modelio statistikų išvedimui
+library(modelsummary)
+# Biblioteka, modelio parinkimui "stepwise" metodu
+library(MASS)
+# Biblioteka, reikalinga polinkio analizei atlikti
+library(MatchIt)
+# Biblioteka, reikalinga lyginimo vizualiam įvertinimui
+library(cobalt)
+
+# Prieš ir po lyginimo funkcija
+Pries_ir_Po_lyginimo <-
+  function(duomenys,
+           kintamasis,
+           xlab,
+           ylab,
+           legend_text) {
+    bal.plot(
+      duomenys,
+      var.name = kintamasis,
+      which = "both",
+      sample.names	= c("Prieš atrinkimą", "Po atrinkimo")
+    ) +
+      theme_minimal() +
+      xlab(xlab) +
+      ylab(ylab) +
+      labs(fill = "Limfmazgių būklė") +
+      theme(
+        axis.text.x = element_text(size = 13),
+        axis.text.y = element_text(size = 13),
+        axis.title.x = element_text(size = 16),
+        axis.title.y = element_text(size = 16),
+        legend.text = element_text(size = 13),
+        legend.title = element_text(size = 16),
+        strip.text = element_text(size = 16)
+      ) +
+      scale_fill_brewer(palette = "Dark2", labels = legend_text) +
+      ggtitle(element_blank())
+  }
+
+###############################################################################
+# Homogeninės grupės pagal LNI01 0 ir 1
+###############################################################################
+sutvarkyti_duomenys_LNI01_0_1 <- sutvarkyti_duomenys %>%
+  filter(LNI01 != "2") %>%
+  mutate(
+    LNI01 = factor(LNI01),
+    pT = factor(pT),
+    R1 = factor(R1),
+    GLpoRP_ISUP = factor(GLpoRP_ISUP),
+    Amzius = as.numeric(Amzius),
+    PSAI = as.numeric(PSAI),
+    CSS = factor(CSS)
+  )
+
+
+
+# Sudarome modelį su visais kintamaisiais
+Modelis_A <- glm(LNI01 ~ Amzius + PSAI + pT + R1 + GLpoRP_ISUP,
+                 data = sutvarkyti_duomenys_LNI01_0_1,
+                 family = "binomial")
+# Modelis, be R1 kintamojo
+Modelis_B <- glm(LNI01 ~ Amzius + PSAI + pT + GLpoRP_ISUP,
+                 data = sutvarkyti_duomenys_LNI01_0_1,
+                 family = "binomial")
+# Modelis, be R1 ir PSAI kintamųjų
+Modelis_C <- glm(LNI01 ~ Amzius + pT + GLpoRP_ISUP,
+                 data = sutvarkyti_duomenys_LNI01_0_1,
+                 family = "binomial")
+# Modelis, be R1 ir Amziaus kintamųjų
+Modelis_D <- glm(LNI01 ~ PSAI + pT + GLpoRP_ISUP,
+                 data = sutvarkyti_duomenys_LNI01_0_1,
+                 family = "binomial")
+# Tuščias modelis
+Modelis_E <- glm(LNI01 ~ 1,
+                 data = sutvarkyti_duomenys_LNI01_0_1, family = "binomial")
+
+# Palyginame modelius
+Modeliai_ABCD <- msummary(
+  list(
+    "Modelis A" = Modelis_A,
+    "Modelis B" = Modelis_B,
+    "Modelis C" = Modelis_C,
+    "Modelis D" = Modelis_D,
+    "Modelis E" = Modelis_E
+  )
+)
+Modeliai_ABCD
+
+# Parenkame tinkamą modelį "stepwise" metodu pagal AIC, pradedame nuo tuščio modelio
+Modelis_stepwise <-
+  stepAIC(Modelis_E,
+          scope = list(
+            upper = ~ Amzius * PSAI * pT * R1 * GLpoRP_ISUP,
+            lower = ~ 1
+          ))
+
+set.seed(2021)
+# Generuojame polinkio balus, naudodamiesi C modeliu
+homogeniai_duomenys_LNI01_0_1 <- matchit(
+  Modelis_stepwise$formula,
+  data = sutvarkyti_duomenys_LNI01_0_1,
+  method = "nearest",
+  # Naudojame "nearest neighbour" metodą
+  distance = "glm",
+  # Polinkio balams generuoti naudosime logistinę regresiją
+  replace = F,
+  # Kontrolės stebinys yra priskiriamas tik vienam atvejo stebiniui
+  caliper = .836,
+  ratio = 1
+) # Atvejo stebiniui priskiriame tik vieną kontrolės stebinį
+
+# Lyginimo informacija
+lyginimo_informacija <- summary(homogeniai_duomenys_LNI01_0_1)
+# Tikriname standartizuotų vidurkių skirtumus
+print(summary(abs(
+  as.data.frame(
+    summary(homogeniai_duomenys_LNI01_0_1, standardize = T)$sum.matched
+  )$`Std. Mean Diff`
+)))
+
+# Kintamųjų statistika prieš atrinkimą
+knitr::kable(round(lyginimo_informacija$sum.all[, 1:3], 3))
+
+# Kintamųjų statistika po atrinkimo
+knitr::kable(round(lyginimo_informacija$sum.matched[, 1:3], 3))
+
+bal.tab(homogeniai_duomenys_LNI01_0_1)
+
+# Prieš ir po lyginimo tankio funkcija pagal polinkio balą
+pries_po_PolinkioBalas <-
+  Pries_ir_Po_lyginimo(
+    homogeniai_duomenys_LNI01_0_1,
+    "distance",
+    "Polinkio balas (tikimybė)",
+    "Tankis",
+    c("0 - švarūs", "1 - pažeisti vėžiu")
+  )
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\pries_po_PolinkioBalas.png"),
+  plot = pries_po_PolinkioBalas,
+  width = 14,
+  height = 8
+)
+# Prieš ir po lyginimo stebinių dalis pagal patologinę stadiją pT
+pries_po_pT <-
+  Pries_ir_Po_lyginimo(
+    homogeniai_duomenys_LNI01_0_1,
+    "pT",
+    "pT, Patologinė stadija",
+    "Imties dalis",
+    c("0 - švarūs", "1 - pažeisti vėžiu")
+  )
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\pries_po_pT.png"),
+  plot = pries_po_pT,
+  width = 14,
+  height = 8
+)
+# Prieš ir po lyginimo stebinių dalis pagal limfmazgių skaičių GLpoRP_ISUP
+pries_po_GLpoRPISUP <-
+  Pries_ir_Po_lyginimo(
+    homogeniai_duomenys_LNI01_0_1,
+    "GLpoRP_ISUP",
+    "GLpoRP_ISUP, Limfmazgių skaičius",
+    "Imties dalis",
+    c("0 - švarūs", "1 - pažeisti vėžiu")
+  )
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\pries_po_GLpoRPISUP.png"),
+  plot = pries_po_GLpoRPISUP,
+  width = 14,
+  height = 8
+)
+# Prieš ir po lyginimo stebinių dalis pagal paciento amžių
+pries_po_Amzius <-
+  Pries_ir_Po_lyginimo(
+    homogeniai_duomenys_LNI01_0_1,
+    "Amzius",
+    "Amzius, Paciento Amžius",
+    "Tankis",
+    c("0 - švarūs", "1 - pažeisti vėžiu")
+  )
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\pries_po_Amzius.png"),
+  plot = pries_po_Amzius,
+  width = 14,
+  height = 8
+)
+
+kintamuju_pavadinimai <-
+  data.frame(
+    old = c(
+      "distance",
+      "pT_0",
+      "pT_1",
+      "pT_2",
+      "GLpoRP_ISUP_1",
+      "GLpoRP_ISUP_2",
+      "GLpoRP_ISUP_3",
+      "GLpoRP_ISUP_4",
+      "GLpoRP_ISUP_5",
+      "Amzius"
+    ),
+    new = c(
+      "Polinkio balas (tikimybė)",
+      "Patologinė stadija - 0",
+      "Patologinė stadija - 1",
+      "Patologinė stadija - 2",
+      "Limfmazgių skaičius - 1",
+      "Limfmazgių skaičius - 2",
+      "Limfmazgių skaičius - 3",
+      "Limfmazgių skaičius - 4",
+      "Limfmazgių skaičius - 5",
+      "Paciento amžius"
+    )
+  )
+# Kovariančių balansas
+pries_po_Bendras <-
+  love.plot(
+    homogeniai_duomenys_LNI01_0_1,
+    stats = c("mean.diffs"),
+    threshold = c(m = .1),
+    binary = "std",
+    abs = TRUE,
+    var.names = kintamuju_pavadinimai,
+    limits = c(0, 1),
+    grid = FALSE,
+    wrap = 20,
+    size = 5,
+    sample.names = c("Neatrinkti stebiniai", "Atrinkti stebiniai"),
+    position = "top",
+    shapes = c("circle", "triangle"),
+    colors = c("#D95F02", "#1B9E77"),
+    title = ""
+  )  +
+  theme(
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 16)
+  ) +
+  xlab("Absoliutus Standartizuotų Vidurkių Skirtumas")
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\pries_po_Bendras.png"),
+  plot = pries_po_Bendras,
+  width = 14,
+  height = 8
+)
+
+
+# Gauname naują homogenizuotą duomenų imtį pagal LNI01 {0 ir 1}
+homogeniai_duomenys_LNI01_0_1 <-
+  match.data(homogeniai_duomenys_LNI01_0_1)
+###############################################################################
+###############################################################################
+###############################################################################
+
+###############################################################################
+# Homogeninės grupės pagal LNI01 {0,1} ir 2 
+###############################################################################
+sutvarkyti_duomenys_LNI01_01_2 <- sutvarkyti_duomenys %>%
+  filter(LNI01 == "2") %>%
+  bind_rows(homogeniai_duomenys_LNI01_0_1[, 1:(ncol(homogeniai_duomenys_LNI01_0_1) -
+                                                 3)]) %>%
+  mutate(LN_naujas = factor(case_when(LNI01 == "2" ~ "0",
+                                      TRUE ~ "1"))) %>%
+  mutate(
+    LNI01 = factor(LNI01),
+    pT = factor(pT),
+    R1 = factor(R1),
+    GLpoRP_ISUP = factor(GLpoRP_ISUP),
+    Amzius = as.numeric(Amzius),
+    PSAI = as.numeric(PSAI),
+    CSS = factor(CSS)
+  )
+
+# Sudarome modelį su visais kintamaisiais
+Modelis_A <- glm(LN_naujas ~ Amzius + PSAI + pT + R1 + GLpoRP_ISUP,
+                 data = sutvarkyti_duomenys_LNI01_01_2,
+                 family = "binomial")
+# Modelis, be R1 kintamojo
+Modelis_B <- glm(LN_naujas ~ Amzius + PSAI + pT + GLpoRP_ISUP,
+                 data = sutvarkyti_duomenys_LNI01_01_2,
+                 family = "binomial")
+# Modelis, be R1 ir PSAI kintamųjų
+Modelis_C <- glm(LN_naujas ~ Amzius + pT + GLpoRP_ISUP,
+                 data = sutvarkyti_duomenys_LNI01_01_2,
+                 family = "binomial")
+# Modelis, be R1 ir Amziaus kintamųjų
+Modelis_D <- glm(LN_naujas ~ PSAI + pT + GLpoRP_ISUP,
+                 data = sutvarkyti_duomenys_LNI01_01_2,
+                 family = "binomial")
+# Tuščias modelis
+Modelis_E <- glm(LN_naujas ~ 1,
+                 data = sutvarkyti_duomenys_LNI01_01_2, family = "binomial")
+
+# Palyginame modelius
+Modeliai_ABCD <- msummary(
+  list(
+    "Modelis A" = Modelis_A,
+    "Modelis B" = Modelis_B,
+    "Modelis C" = Modelis_C,
+    "Modelis D" = Modelis_D,
+    "Modelis E" = Modelis_E
+  )
+)
+Modeliai_ABCD
+
+# Parenkame tinkamą modelį "stepwise" metodu pagal AIC, pradedame nuo tuščio modelio
+Modelis_stepwise <-
+  stepAIC(Modelis_E,
+          scope = list(
+            upper = ~ Amzius * PSAI * pT * R1 * GLpoRP_ISUP,
+            lower = ~ 1
+          ))
+
+set.seed(2021)
+# Generuojame polinkio balus, naudodamiesi D modeliu
+homogeniai_duomenys_LNI01_01_2 <- matchit(
+  Modelis_stepwise$formula,
+  data = sutvarkyti_duomenys_LNI01_01_2,
+  method = "nearest",
+  # Naudojame "nearest neighbour" metodą
+  distance = "glm",
+  # Polinkio balams generuoti naudosime logistinę regresiją
+  replace = F,
+  # Kontrolės stebinys yra priskiriamas tik vienam atvejo stebiniui
+  caliper = .606,
+  ratio = 1
+) # Atvejo stebiniui priskiriame tik vieną kontrolės stebinį
+
+# Lyginimo modelio informacija
+lyginimo_informacija <- summary(homogeniai_duomenys_LNI01_01_2)
+# Tikriname standartizuotų vidurkių skirtumus
+summary(abs(as.data.frame(
+  summary(homogeniai_duomenys_LNI01_01_2, standardize = T)$sum.matched
+)$`Std. Mean Diff`))
+
+# Kintamųjų statistika prieš atrinkimą
+knitr::kable(round(lyginimo_informacija$sum.all[, 1:3], 3))
+
+# Kintamųjų statistika po atrinkimo
+knitr::kable(round(lyginimo_informacija$sum.matched[, 1:3], 3))
+
+bal.tab(homogeniai_duomenys_LNI01_01_2)
+
+# Prieš ir po lyginimo tankio funkcija pagal polinkio balą
+pries_po_PolinkioBalas_2 <-
+  Pries_ir_Po_lyginimo(
+    homogeniai_duomenys_LNI01_01_2,
+    "distance",
+    "Polinkio balas (tikimybė)",
+    "Tankis",
+    c("2 - Limfmazgiai nešalinti", "{0, 1}")
+  )
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\pries_po_PolinkioBalas_2.png"),
+  plot = pries_po_PolinkioBalas_2,
+  width = 14,
+  height = 8
+)
+# Prieš ir po lyginimo stebinių dalis pagal patologinę stadiją pT
+pries_po_pT_2 <-
+  Pries_ir_Po_lyginimo(
+    homogeniai_duomenys_LNI01_01_2,
+    "pT",
+    "pT, Patologinė stadija",
+    "Imties dalis",
+    c("2 - Limfmazgiai nešalinti", "{0, 1}")
+  )
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\pries_po_pT_2.png"),
+  plot = pries_po_pT_2,
+  width = 14,
+  height = 8
+)
+# Prieš ir po lyginimo stebinių dalis pagal limfmazgių skaičių GLpoRP_ISUP
+pries_po_GLpoRPISUP_2 <-
+  Pries_ir_Po_lyginimo(
+    homogeniai_duomenys_LNI01_01_2,
+    "GLpoRP_ISUP",
+    "GLpoRP_ISUP, Limfmazgių skaičius",
+    "Imties dalis",
+    c("2 - Limfmazgiai nešalinti", "{0, 1}")
+  )
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\pries_po_GLpoRPISUP_2.png"),
+  plot = pries_po_GLpoRPISUP_2,
+  width = 14,
+  height = 8
+)
+# Prieš ir po lyginimo stebinių dalis pagal paciento amžių
+pries_po_PSA_2 <-
+  Pries_ir_Po_lyginimo(
+    homogeniai_duomenys_LNI01_01_2,
+    "PSAI",
+    "PSA, prostatos specifiniai antigenai",
+    "Tankis",
+    c("2 - Limfmazgiai nešalinti", "{0, 1}")
+  )
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\pries_po_PSA_2.png"),
+  plot = pries_po_PSA_2,
+  width = 14,
+  height = 8
+)
+
+kintamuju_pavadinimai <-
+  data.frame(
+    old = c(
+      "distance",
+      "pT_0",
+      "pT_1",
+      "pT_2",
+      "GLpoRP_ISUP_1",
+      "GLpoRP_ISUP_2",
+      "GLpoRP_ISUP_3",
+      "GLpoRP_ISUP_4",
+      "GLpoRP_ISUP_5",
+      "PSAI"
+    ),
+    new = c(
+      "Polinkio balas (tikimybė)",
+      "Patologinė stadija - 0",
+      "Patologinė stadija - 1",
+      "Patologinė stadija - 2",
+      "Limfmazgių skaičius - 1",
+      "Limfmazgių skaičius - 2",
+      "Limfmazgių skaičius - 3",
+      "Limfmazgių skaičius - 4",
+      "Limfmazgių skaičius - 5",
+      "Prostatos specifiniai antigenai"
+    )
+  )
+# Kovariančių balansas
+pries_po_Bendras_2 <-
+  love.plot(
+    homogeniai_duomenys_LNI01_01_2,
+    stats = c("mean.diffs"),
+    threshold = c(m = .1),
+    binary = "std",
+    abs = TRUE,
+    var.names = kintamuju_pavadinimai,
+    limits = c(0, 1),
+    grid = FALSE,
+    wrap = 20,
+    size = 5,
+    sample.names = c("Neatrinkti stebiniai", "Atrinkti stebiniai"),
+    position = "top",
+    shapes = c("circle", "triangle"),
+    colors = c("#D95F02", "#1B9E77"),
+    title = ""
+  )  +
+  theme(
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 16)
+  ) +
+  xlab("Absoliutus Standartizuotų Vidurkių Skirtumas")
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\pries_po_Bendras_2.png"),
+  plot = pries_po_Bendras_2,
+  width = 14,
+  height = 8
+)
+
+# Gauname naują homogenizuotą duomenų imtį pagal LNI01 {0,1 ir 2}
+homogeniai_duomenys <- match.data(homogeniai_duomenys_LNI01_01_2)
+```
+
+# Tikriname homogeniškumą
+```{r}
+# Biblioteka pairwise vizualiam atvaizdavimui
+library(tidyverse)
+# Biblioteka ne parametrinei dispersinei analizei atlikti
+library(rstatix)
+
+# Aprašomoji statistinė lentelė, įtraukiam dispresiją
+Statistine_Lentele <-
+  function(Duomenys,
+           Tolydusis_Kintamasis,
+           Kategorinis_Kintamasis) {
+    desc_statby(Duomenys, measure.var = Tolydusis_Kintamasis, grps = Kategorinis_Kintamasis) %>%
+      mutate(Kintamasis = Tolydusis_Kintamasis) %>%
+      dplyr::select(Kintamasis, 1, length, min, max, mean, median, sd, var) %>%
+      rename(
+        N = length,
+        `Min.` = min,
+        `Max.` = max,
+        `Vid.` = mean,
+        `Mediana` = median,
+        SD = sd,
+        Dispersija = var
+      ) %>%
+      mutate(across(where(is.numeric), round, 2))
+  }
+
+###############################################################################
+# Tikriname ar kintamieji pasiskirstę normaliuoju skirstiniu
+###############################################################################
+# Shapiro-Wilks test'as Amžiaus kintamąjam
+shapiro.test(homogeniai_duomenys$Amzius)
+# Kolmogorov-Smirnov test'as Amžiaus kintamąjam
+ks.test(
+  homogeniai_duomenys$Amzius,
+  "pnorm",
+  mean = mean(homogeniai_duomenys$Amzius),
+  sd = sd(homogeniai_duomenys$Amzius)
+)
+normalumas_amzius <-
+  ggqqplot(homogeniai_duomenys$Amzius,
+           size = 2,
+           conf.int.level = 0.99) +
+  xlab("Teoriniai kvantiliai") +
+  ylab("Imties kvantiliai")  +
+  theme(
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16)
+  )
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\normalumas_amzius.png"),
+  plot = normalumas_amzius,
+  width = 14,
+  height = 8
+)
+# Shapiro-Wilks test'as PSAI kintamąjam
+shapiro.test(homogeniai_duomenys$PSAI)
+# Kolmogorov-Smirnov test'as PSAI kintamąjam
+ks.test(
+  homogeniai_duomenys$PSAI,
+  "pnorm",
+  mean = mean(homogeniai_duomenys$PSAI),
+  sd = sd(homogeniai_duomenys$PSAI)
+)
+normalumas_psai <-
+  ggqqplot(homogeniai_duomenys$PSAI,
+           size = 2,
+           conf.int.level = 0.99) +
+  xlab("Teoriniai kvantiliai") +
+  ylab("Imties kvantiliai")  +
+  theme(
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16)
+  )
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\normalumas_psai.png"),
+  plot = normalumas_psai,
+  width = 14,
+  height = 8
+)
+
+knitr::kable(Statistine_Lentele(homogeniai_duomenys, "Amzius", "LNI01"))
+knitr::kable(Statistine_Lentele(homogeniai_duomenys, "PSAI", "LNI01"))
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+###############################################################################
+# Taikom ne parametrinę dispersinę analizę naudodami Kruskal-Wallis test'ą
+###############################################################################
+# Atliekame amžiaus pagal LNI01 ne parametrinę dispresinę analizę Kruskal-Wallis test'ą
+Kruskal_Amzius <- homogeniai_duomenys %>%
+  kruskal_test(Amzius ~ LNI01)
+Kruskal_Amzius
+
+# Pairwise lyginimas tarp grupių Dunn metodu
+PairwiseComparison_Amzius <- homogeniai_duomenys %>%
+  dunn_test(Amzius ~ LNI01)
+knitr::kable(PairwiseComparison_Amzius)
+
+# Pairwise lyginimas tarp grupių Wilcox metodu
+knitr::kable(homogeniai_duomenys %>%
+               wilcox_test(Amzius ~ LNI01))
+
+# Vizualizuojame pariwise lyginimą
+PairwiseComparison_Amzius <-
+  PairwiseComparison_Amzius %>% add_xy_position(x = "LNI01")
+PW_amzius <-
+  ggboxplot(homogeniai_duomenys, x = "LNI01", y = "Amzius") +
+  stat_pvalue_manual(PairwiseComparison_Amzius, hide.ns = TRUE) +
+  labs(
+    subtitle = get_test_label(Kruskal_Amzius, detailed = TRUE),
+    caption = get_pwc_label(PairwiseComparison_Amzius)
+  )  +
+  theme(
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    plot.subtitle = element_text(size = 16),
+    plot.caption = element_text(size = 16)
+  )
+
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\PW_amzius.png"),
+  plot = PW_amzius,
+  width = 14,
+  height = 8
+)
+
+
+# Atliekame PSAI pagal LNI01 ne parametrinę dispresinę analizę Kruskal-Wallis test'ą
+Kruskal_PSAI <- homogeniai_duomenys %>%
+  kruskal_test(PSAI ~ LNI01)
+Kruskal_PSAI
+
+# Pairwise lyginimas tarp grupių Dunn metodu
+PairwiseComparison_PSAI <- homogeniai_duomenys %>%
+  dunn_test(PSAI ~ LNI01)
+knitr::kable(PairwiseComparison_PSAI)
+
+# Pairwise lyginimas tarp grupių Wilcox metodu
+knitr::kable(homogeniai_duomenys %>%
+               wilcox_test(PSAI ~ LNI01))
+
+# Vizualizuojame pariwise lyginimą
+PairwiseComparison_PSAI <-
+  PairwiseComparison_PSAI %>% add_xy_position(x = "LNI01")
+PW_PSAI <- ggboxplot(homogeniai_duomenys, x = "LNI01", y = "PSAI") +
+  stat_pvalue_manual(PairwiseComparison_PSAI, hide.ns = TRUE) +
+  labs(
+    subtitle = get_test_label(Kruskal_PSAI, detailed = TRUE),
+    caption = get_pwc_label(PairwiseComparison_PSAI)
+  )  +
+  theme(
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    plot.subtitle = element_text(size = 16),
+    plot.caption = element_text(size = 16)
+  )
+
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\PW_PSAI.png"),
+  plot = PW_PSAI,
+  width = 14,
+  height = 8
+)
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+
+###############################################################################
+# Požymių priklausomumo lentelės
+###############################################################################
+# LNI01 ir GLpoRP_ISUP
+knitr::kable(xtabs(~ LNI01 + GLpoRP_ISUP, data = homogeniai_duomenys))
+homogeniai_duomenys <- homogeniai_duomenys %>%
+  mutate(GLpoRP_ISUP = factor(case_when(
+    as.character(GLpoRP_ISUP) == "1" ~ "2",
+    TRUE ~ as.character(GLpoRP_ISUP)
+  )))
+
+Pozymiu_Lentele <-
+  xtabs(~ LNI01 + GLpoRP_ISUP, data = homogeniai_duomenys)
+knitr::kable(Pozymiu_Lentele)
+# Taikome chi kvadratą
+chisq.test(Pozymiu_Lentele)
+
+#LNI01 ir pT
+Pozymiu_Lentele <- xtabs(~ LNI01 + pT, data = homogeniai_duomenys)
+knitr::kable(Pozymiu_Lentele)
+# Taikome chi kvadratą
+chisq.test(Pozymiu_Lentele)
+
+#LNI01 ir R1
+Pozymiu_Lentele <- xtabs(~ LNI01 + R1, data = homogeniai_duomenys)
+knitr::kable(Pozymiu_Lentele)
+# Taikome chi kvadratą
+chisq.test(Pozymiu_Lentele)
+# Taikome Freeman-Halton fisher’s exact test'ą
+fisher.test(Pozymiu_Lentele)
+###############################################################################
+###############################################################################
+###############################################################################
+
+```
+
+# Cox ir Fine-Gray modelių duomenys ir funkcijos
+```{r}
+apmokymo_imtis <- homogeniai_duomenys %>%
+  mutate(
+    CSS = as.numeric(CSS) - 1,
+    Death_other_causes = as.numeric(Death_other_causes) - 1,
+    LNI01 = factor(LNI01),
+    pT = factor(pT),
+    R1 = factor(R1),
+    GLpoRP_ISUP = factor(GLpoRP_ISUP),
+    Amzius = as.numeric(Amzius),
+    PSAI = as.numeric(PSAI),
+  )
+
+# Testavimo imtį sudarys visi like stebiniai, kurie nepateko į homogeninę duomenų imtį
+testavimo_imtis <- sutvarkyti_duomenys %>%
+  filter(!(numeris %in% apmokymo_imtis$numeris)) %>%
+  mutate(GLpoRP_ISUP = factor(case_when(
+    as.character(GLpoRP_ISUP) == "1" ~ "2",
+    TRUE ~ as.character(GLpoRP_ISUP)
+  ))) %>%
+  mutate(
+    CSS = as.numeric(CSS) - 1,
+    Death_other_causes = as.numeric(Death_other_causes) - 1,
+    LNI01 = factor(LNI01),
+    pT = factor(pT),
+    R1 = factor(R1),
+    GLpoRP_ISUP = factor(GLpoRP_ISUP),
+    Amzius = as.numeric(Amzius),
+    PSAI = as.numeric(PSAI),
+  ) %>%
+  select(-numeris, -OS, -Death_other_causes)
+
+# Funkcija, skaičiuojanti modelio spėjamą tikimybę kiekvienam stebiniui iš pateiktos duomenų imties
+Tikimybes <- function(tikimybiu_matrica_f, testavimo_imtis_f) {
+  # Susidarome tuščia vektorių
+  tikimybes <-
+    vector(mode = "numeric", length = nrow(testavimo_imtis_f))
+  
+  # Surikiuojame pateiktos testavimo imties stebėjimo laikus
+  stebejimo_laikai <- sort(unique(testavimo_imtis_f$Survival_years))
+  
+  # Kiekvienam stebiniui surandame išgyvenimo tikimybę ties jo stebėjimo laiku
+  for (i in 1:length(tikimybes)) {
+    # Pasiemame i-tojo stebinio išgyvenimo tikimybes ties visomis stebėjimo laiko reikšmėmis
+    i_stebinio_tikimybes <- tikimybiu_matrica_f[i,]
+    # Randame i-tojo vektoriaus didžiausią poziciją, ties kuria sutampa visų turimų stebėjimų laikas su stebinio stebėjimo laiku
+    poz <-
+      max(which(stebejimo_laikai == testavimo_imtis_f$Survival_years[i]))
+    # Priskiriame tikimybę i-tajam stebiniui
+    tikimybes[i] <- i_stebinio_tikimybes[poz]
+  }
+  return(tikimybes)
+}
+
+# Skaičiuojame rizikos santykius visoms įmanomoms lygmenų kombinacijoms
+visi_lygmenys <- function(apmokymo_imtis, modelis) {
+  list_variables <- NULL
+  for (i in 1:4) {
+    list_imtis <- apmokymo_imtis %>%
+      mutate(
+        pT = factor(pT, levels = list_pT_R1_LNI01[[i]]),
+        R1 = factor(R1, levels = list_pT_R1_LNI01[[i]]),
+        LNI01 = factor(LNI01, levels = list_pT_R1_LNI01[[i]]),
+        GLpoRP_ISUP = factor(GLpoRP_ISUP, levels = list_GLpoRPISUP[[i]])
+      )
+    if(modelis == "Cox"){
+      list_cox <-
+      coxph(
+        Surv(Survival_years, mirties_kintamasis) ~ Amzius + PSAI + pT + LNI01 + R1 + GLpoRP_ISUP,
+        data = list_imtis,
+        x = TRUE,
+        y = TRUE
+      )
+      list_summary <- summary(list_cox)
+    }else if(modelis == "FG"){
+      list_finegray <-
+    FGR(
+      Hist(Survival_years, mirties_kintamasis) ~ Amzius + PSAI + pT + LNI01 + R1 + GLpoRP_ISUP,
+      data = list_imtis,
+      cause = "1"
+    )
+  
+  list_summary <- summary(list_finegray$crrFit)
+    }else return(null)
+
+    list_variables <- as.data.frame(list_summary$coef[, c(1, 5)]) %>%
+    tibble::rownames_to_column(var = "kintamasis") %>%
+    mutate(kintamasis = case_when(
+      grepl("GLpoRP", kintamasis) ~ paste0(kintamasis, "_vs_", list_GLpoRPISUP[[i]][1]),!(kintamasis %in% c("Amzius", "PSAI")) ~ paste0(kintamasis, "_vs_", list_pT_R1_LNI01[[i]][1]),
+      TRUE ~ kintamasis
+    )) %>%
+    bind_cols(as.data.frame(list_summary$conf.int)) %>%
+    bind_rows(list_variables) %>%
+    mutate_if(is.numeric, round, 3)
+  }
+  return(list_variables)
+}
+
+```
+
+# Cox modelis
+```{r}
+# Biblioteka, reikalinga cox rizikos modelio sudarymui
+library(survival)
+# Biblioteka, reikalinga concordance indexui suskaičiuoti
+library(survcomp)
+# Biblioteka, reikalinga tiksliausio COX modelio atrinkimui
+library(pec)
+# Biblioteka, reikalinga sumaišymo matricai sugeneruoti
+library(caret)
+# Biblioteka, reikalinga rizikos tikimybių matricai sudaryti
+library(riskRegression)
+
+
+# Sudarome COX modelį su atrinktais homogeniniais duomenimis
+cox <-
+  coxph(
+    Surv(Survival_years, CSS) ~ Amzius + PSAI + pT + LNI01 + R1 + GLpoRP_ISUP,
+    data = apmokymo_imtis,
+    x = TRUE,
+    y = TRUE
+  )
+
+summary(cox)
+
+# 95% pasikliautinieji intervalai
+confint(cox, level = 0.95)
+exp(confint(cox, level = 0.95))
+
+# 99% pasikliautinieji intervalai
+confint(cox, level = 0.99)
+exp(confint(cox, level = 0.99))
+
+# Tikriname proporcingumo hipotezes
+cox.zph(cox)
+
+# Sudarome grafinį cox modelio kintamųjų rizikos santykių atvaizdavimą
+cox_forest <- ggforest(cox,
+                       main = "",
+                       fontsize = 1.5,
+                       refLabel = "palyginamsis")
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\Amzius_cox_forest.png"),
+  plot = cox_forest,
+  width = 14,
+  height = 8
+)
+
+# Skaičiuojame tikimybių matricą apmokymo imčiai naudodamiesi cox modeliu
+cox_tikimybiu_matrica_apmokymo <-
+  predictRisk(cox, newdata = apmokymo_imtis, times = sort(unique(apmokymo_imtis$Survival_years)))
+# Skačiuojam kiekvieno apmokymo imties stebinio tikimybę mirti nuo prostatos vėžio
+cox_tikimybes_apmokymo <-
+  Tikimybes(cox_tikimybiu_matrica_apmokymo, apmokymo_imtis)
+
+
+
+# Skaičiuojame tikimybių matricą testavimo imčiai naudodamiesi cox modeliu
+cox_tikimybiu_matrica_testavimo <-
+  predictRisk(cox, newdata = testavimo_imtis, times = sort(unique(testavimo_imtis$Survival_years)))
+# Skačiuojam kiekvieno testavimo imties stebinio tikimybę mirti nuo prostatos vėžio
+cox_tikimybes_testavimo <-
+  Tikimybes(cox_tikimybiu_matrica_testavimo, testavimo_imtis)
+
+
+# Apskaičiuosim skirtingų faktorių lygmenų rizikos santykius
+list_pT_R1_LNI01 <- list(c("0", "1", "2"),
+                         c("1", "0", "2"),
+                         c("2", "0", "1"),
+                         c("0", "1", "2"))
+
+list_GLpoRPISUP <- list(c("2", "3", "4", "5"),
+                        c("3", "2", "4", "5"),
+                        c("4", "2", "3", "5"),
+                        c("5", "2", "3", "4"))
+
+# Skaičiuojam visų faktorių lygmenų rizikos santykius pagal mirtis nuo prostatos vėžio
+list_variables_css <- visi_lygmenys(apmokymo_imtis %>% mutate(mirties_kintamasis = CSS), modelis = "Cox")
+knitr::kable(list_variables_css)
+
+# Skaičiuojam visų faktorių lygmenų rizikos santykius pagal mirtis nuo kitų priežasčių
+list_variables_doc <- visi_lygmenys(apmokymo_imtis %>% mutate(mirties_kintamasis = Death_other_causes), modelis = "Cox")
+knitr::kable(list_variables_doc)
+```
+
+# Fine & Gray modelis
+```{r}
+# Biblioteka, reikalinga Fine & Gray modelio sudarymui
+library(cmprsk)
+
+# Sudarome Fine & Gray modelį su atrinktais homogeniniais duomenimis
+finegray <-
+  FGR(
+    Hist(Survival_years, CSS) ~ Amzius + PSAI + pT + LNI01 + R1 + GLpoRP_ISUP,
+    data = apmokymo_imtis,
+    cause = "1"
+  )
+
+summary(finegray$crrFit)
+
+# Skaičiuojame tikimybių matricą testavimo imčiai naudodamiesi Fine & Gray modeliu
+finegray_tikimybiu_matrica_apmokymo <-
+  predictRisk(finegray, newdata = apmokymo_imtis, times = sort(unique(apmokymo_imtis$Survival_years)))
+# Skačiuojam kiekvieno testavimo imties stebinio tikimybę mirti nuo prostatos vėžio
+finegray_tikimybes_apmokymo <-
+  Tikimybes(finegray_tikimybiu_matrica_apmokymo, apmokymo_imtis)
+
+
+
+# Skaičiuojame tikimybių matricą testavimo imčiai naudodamiesi Fine & Gray modeliu
+finegray_tikimybiu_matrica_testavimo <-
+  predictRisk(finegray, newdata = testavimo_imtis, times = sort(unique(testavimo_imtis$Survival_years)))
+# Skačiuojam kiekvieno testavimo imties stebinio tikimybę mirti nuo prostatos vėžio
+finegray_tikimybes_testavimo <-
+  Tikimybes(finegray_tikimybiu_matrica_testavimo, testavimo_imtis)
+
+
+# Skaičiuojam visų faktorių lygmenų rizikos santykius pagal mirtis nuo prostatos vėžio
+list_variables_css <- visi_lygmenys(apmokymo_imtis %>% mutate(mirties_kintamasis = CSS), modelis = "FG")
+knitr::kable(list_variables_css)
+
+# Skaičiuojam visų faktorių lygmenų rizikos santykius pagal mirtis nuo kitų priežasčių
+list_variables_doc <- visi_lygmenys(apmokymo_imtis %>% mutate(mirties_kintamasis = Death_other_causes), modelis = "FG")
+knitr::kable(list_variables_doc)
+```
+ 
+# Palyginam Cox ir Fine & Gray modelius
+```{r}
+# Biblioteka, reikalinga ROC kreivių sudarymui
+library(pROC)
+
+# Generuojame ROC kreivę cox modeliui ant apmokymo imties
+cox_roc_apmokymo <- roc(apmokymo_imtis$CSS, cox_tikimybes_apmokymo)
+cox_roc_apmokymo
+
+# Generuojame ROC kreivę fine & gray modeliui ant apmokymo imties
+finegray_roc_apmokymo <-
+  roc(apmokymo_imtis$CSS, finegray_tikimybes_apmokymo)
+finegray_roc_apmokymo
+
+# Atvaizduojame Cox ir Fine & Gray modelių ROC kreives apmokymo imčiai
+roc_cox_vs_finegray_apmokymo <- ggroc(list(Cox = cox_roc_apmokymo,
+                                           Fine_Gray = finegray_roc_apmokymo),
+                                      legacy.axes = T) +
+  geom_abline() +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16)
+  ) +
+  scale_color_brewer(palette = "Dark2") +
+  geom_line(size = 2) +
+  labs(color = "Modelis")
+
+ggsave(
+  paste0(
+    Vizualizaciju_Aplankas,
+    "\\roc_cox_vs_finegray_apmokymo.png"
+  ),
+  plot = roc_cox_vs_finegray_apmokymo,
+  width = 14,
+  height = 8
+)
+
+
+
+########## Palyginimas ant testavimo imties ################
+
+# Generuojame ROC kreivę cox modeliui ant testavimo imties
+cox_roc_testavimo <-
+  roc(testavimo_imtis$CSS, cox_tikimybes_testavimo)
+cox_roc_testavimo
+
+# Generuojame ROC kreivę fine & gray modeliui ant testavimo imties
+finegray_roc_testavimo <-
+  roc(testavimo_imtis$CSS, finegray_tikimybes_testavimo)
+finegray_roc_testavimo
+
+# Atvaizduojame Cox ir Fine & Gray modelių ROC kreives testavimo imčiai
+roc_cox_vs_finegray_testavimo <- ggroc(list(Cox = cox_roc_testavimo,
+                                            Fine_Gray = finegray_roc_testavimo),
+                                       legacy.axes = T) +
+  geom_abline() +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16)
+  ) +
+  scale_color_brewer(palette = "Dark2") +
+  geom_line(size = 2) +
+  labs(color = "Modelis")
+
+ggsave(
+  paste0(
+    Vizualizaciju_Aplankas,
+    "\\roc_cox_vs_finegray_testavimo.png"
+  ),
+  plot = roc_cox_vs_finegray_testavimo,
+  width = 14,
+  height = 8
+)
+```
+ 
