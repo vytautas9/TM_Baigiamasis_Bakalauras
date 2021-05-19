@@ -193,10 +193,12 @@ Tankio_Vizualizacija <-
       xlab(xlab) +
       ylab(ylab) +
       theme(
-        axis.text.x = element_text(size = 13),
-        axis.text.y = element_text(size = 13),
-        axis.title.x = element_text(size = 16),
-        axis.title.y = element_text(size = 16)
+        axis.text.x = element_text(size = 22),
+        axis.text.y = element_text(size = 22),
+        axis.title.x = element_text(size = 22),
+        axis.title.y = element_text(size = 22),
+        legend.title = element_text(size = 22), 
+        legend.text = element_text(size = 22)
       )
   }
 ###############################################################################
@@ -231,8 +233,9 @@ pT_density <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\Amzius_PSA_pT_density.png"),
   plot = pT_density,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 pT_Lentele <- Amzius_pT_lentele
 pT_Lentele[nrow(pT_Lentele) + 1,] <- NA
@@ -260,8 +263,9 @@ R1_density <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\Amzius_PSA_R1_density.png"),
   plot = R1_density,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 R1_Lentele <- Amzius_R1_lentele
 R1_Lentele[nrow(R1_Lentele) + 1,] <- NA
@@ -291,8 +295,9 @@ LNI01_density <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\Amzius_PSA_LNI01_density.png"),
   plot = LNI01_density,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 LNI01_Lentele <- Amzius_LNI01_lentele
 LNI01_Lentele[nrow(LNI01_Lentele) + 1,] <- NA
@@ -331,8 +336,9 @@ ggsave(
     "\\Amzius_PSA_GLpoRPISUP_density.png"
   ),
   plot = GLpoRPISUP_density,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 GLpoRPISUP_Lentele <- Amzius_GLpoRPISUP_lentele
 GLpoRPISUP_Lentele[nrow(GLpoRPISUP_Lentele) + 1,] <- NA
@@ -351,17 +357,18 @@ Amzius_PSA_scatter <-
   xlab("Amžius") +
   ylab("PSA, Prostatos specifiniai antigenai") +
   theme(
-    axis.text.x = element_text(size = 13),
-    axis.text.y = element_text(size = 13),
-    axis.title.x = element_text(size = 16),
-    axis.title.y = element_text(size = 16)
+    axis.text.x = element_text(size = 22),
+    axis.text.y = element_text(size = 22),
+    axis.title.x = element_text(size = 22),
+    axis.title.y = element_text(size = 22)
   )
 
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\Amzius_PSA_scatter.png"),
   plot = Amzius_PSA_scatter,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 
 
@@ -373,17 +380,18 @@ Stebejimo_Laiko_histograma <-
   xlab("Stebėjimo laikas (metais)") +
   ylab("Kiekis") +
   theme(
-    axis.text.x = element_text(size = 13),
-    axis.text.y = element_text(size = 13),
-    axis.title.x = element_text(size = 16),
-    axis.title.y = element_text(size = 16)
+    axis.text.x = element_text(size = 22),
+    axis.text.y = element_text(size = 22),
+    axis.title.x = element_text(size = 22),
+    axis.title.y = element_text(size = 22)
   )
 
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\Stebejimo_Laiko_histograma.png"),
   plot = Stebejimo_Laiko_histograma,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 ```
 
@@ -423,17 +431,18 @@ KMSA_bendras_CSS_vs_DOS <-
     ylab = "Išgyvenimo tikimybė",
     pval = TRUE,
     pval.method = TRUE,
-    font.x = 16,
-    font.y = 16,
-    font.tickslab = 14,
-    font.legend = 14
+    font.x = 22,
+    font.y = 22,
+    font.tickslab = 22,
+    font.legend = 22
   )
 
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\KMSA_bendras_CSS_vs_DOS.png"),
   plot = KMSA_bendras_CSS_vs_DOS$plot,
-  width = 15,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 
 # Apsirašom funkciją, kurią naudosim išgyvenamumo statistikoms ištraukti
@@ -493,15 +502,20 @@ ggsurv <-  ggsurvplot(
   ylab = "Išgyvenimo tikimybė",
   pval = TRUE,
   pval.method = TRUE,
-  font.x = 16,
-  font.y = 16,
-  font.tickslab = 14,
-  font.legend = 14,
+  font.x = 22,
+  font.y = 22,
+  font.tickslab = 22,
+  font.legend = 22,
   risk.table.fontsize = 8
 )
 ggsurv$table <- ggsurv$table +
   theme(axis.ticks.y = element_blank(),
+        axis.text.y.left = element_text(size = 22),
+        plot.title = element_text(size = 22),
         legend.position = "none")
+
+ggsurv$plot <- ggsurv$plot + 
+  guides(color = guide_legend(override.aes = list(size = 3)))
 
 KMSA_pT_CSS <-
   ggarrange(
@@ -516,8 +530,9 @@ KMSA_pT_CSS <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\KMSA_pT_CSS.png"),
   plot = KMSA_pT_CSS,
-  width = 15,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 
 
@@ -566,15 +581,20 @@ ggsurv <-  ggsurvplot(
   ylab = "Išgyvenimo tikimybė",
   pval = TRUE,
   pval.method = TRUE,
-  font.x = 16,
-  font.y = 16,
-  font.tickslab = 14,
-  font.legend = 14,
+  font.x = 22,
+  font.y = 22,
+  font.tickslab = 22,
+  font.legend = 22,
   risk.table.fontsize = 8
 )
 ggsurv$table <- ggsurv$table +
   theme(axis.ticks.y = element_blank(),
+        axis.text.y.left = element_text(size = 22),
+        plot.title = element_text(size = 22),
         legend.position = "none")
+
+ggsurv$plot <- ggsurv$plot + 
+  guides(color = guide_legend(override.aes = list(size = 3)))
 
 KMSA_LNI01_CSS <-
   ggarrange(
@@ -589,8 +609,9 @@ KMSA_LNI01_CSS <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\KMSA_LNI01_CSS.png"),
   plot = KMSA_LNI01_CSS,
-  width = 15,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 
 ###############################################################################
@@ -638,15 +659,20 @@ ggsurv <-  ggsurvplot(
   ylab = "Išgyvenimo tikimybė",
   pval = TRUE,
   pval.method = TRUE,
-  font.x = 16,
-  font.y = 16,
-  font.tickslab = 14,
-  font.legend = 14,
+  font.x = 22,
+  font.y = 22,
+  font.tickslab = 22,
+  font.legend = 22,
   risk.table.fontsize = 8
 )
 ggsurv$table <- ggsurv$table +
   theme(axis.ticks.y = element_blank(),
+        axis.text.y.left = element_text(size = 22),
+        plot.title = element_text(size = 22),
         legend.position = "none")
+
+ggsurv$plot <- ggsurv$plot + 
+  guides(color = guide_legend(override.aes = list(size = 3)))
 
 KMSA_R1_CSS <-
   ggarrange(
@@ -661,8 +687,9 @@ KMSA_R1_CSS <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\KMSA_R1_CSS.png"),
   plot = KMSA_R1_CSS,
-  width = 15,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 ###############################################################################
 ###############################################################################
@@ -709,15 +736,20 @@ ggsurv <-  ggsurvplot(
   ylab = "Išgyvenimo tikimybė",
   pval = TRUE,
   pval.method = TRUE,
-  font.x = 16,
-  font.y = 16,
-  font.tickslab = 14,
-  font.legend = 14,
+  font.x = 22,
+  font.y = 22,
+  font.tickslab = 22,
+  font.legend = 22,
   risk.table.fontsize = 8
 )
 ggsurv$table <- ggsurv$table +
   theme(axis.ticks.y = element_blank(),
+        axis.text.y.left = element_text(size = 22),
+        plot.title = element_text(size = 22),
         legend.position = "none")
+
+ggsurv$plot <- ggsurv$plot + 
+  guides(color = guide_legend(nrow = 2, byrow = TRUE, override.aes = list(size = 3)))
 
 KMSA_GLpoRPISUP_CSS <-
   ggarrange(
@@ -732,8 +764,9 @@ KMSA_GLpoRPISUP_CSS <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\KMSA_GLpoRPISUP_CSS.png"),
   plot = KMSA_GLpoRPISUP_CSS,
-  width = 15,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 ###############################################################################
 ###############################################################################
@@ -781,15 +814,20 @@ ggsurv <-  ggsurvplot(
   ylab = "Išgyvenimo tikimybė",
   pval = TRUE,
   pval.method = TRUE,
-  font.x = 16,
-  font.y = 16,
-  font.tickslab = 14,
-  font.legend = 14,
+  font.x = 22,
+  font.y = 22,
+  font.tickslab = 22,
+  font.legend = 22,
   risk.table.fontsize = 8
 )
 ggsurv$table <- ggsurv$table +
   theme(axis.ticks.y = element_blank(),
+        axis.text.y.left = element_text(size = 22),
+        plot.title = element_text(size = 22),
         legend.position = "none")
+
+ggsurv$plot <- ggsurv$plot + 
+  guides(color = guide_legend(override.aes = list(size = 3)))
 
 KMSA_pT_DOS <-
   ggarrange(
@@ -804,8 +842,9 @@ KMSA_pT_DOS <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\KMSA_pT_DOS.png"),
   plot = KMSA_pT_DOS,
-  width = 15,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 
 
@@ -854,15 +893,20 @@ ggsurv <-  ggsurvplot(
   ylab = "Išgyvenimo tikimybė",
   pval = TRUE,
   pval.method = TRUE,
-  font.x = 16,
-  font.y = 16,
-  font.tickslab = 14,
-  font.legend = 14,
+  font.x = 22,
+  font.y = 22,
+  font.tickslab = 22,
+  font.legend = 22,
   risk.table.fontsize = 8
 )
 ggsurv$table <- ggsurv$table +
   theme(axis.ticks.y = element_blank(),
+        axis.text.y.left = element_text(size = 22),
+        plot.title = element_text(size = 22),
         legend.position = "none")
+
+ggsurv$plot <- ggsurv$plot + 
+  guides(color = guide_legend(override.aes = list(size = 3)))
 
 KMSA_LNI01_DOS <-
   ggarrange(
@@ -877,8 +921,9 @@ KMSA_LNI01_DOS <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\KMSA_LNI01_DOS.png"),
   plot = KMSA_LNI01_DOS,
-  width = 15,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 
 ###############################################################################
@@ -926,15 +971,20 @@ ggsurv <-  ggsurvplot(
   ylab = "Išgyvenimo tikimybė",
   pval = TRUE,
   pval.method = TRUE,
-  font.x = 16,
-  font.y = 16,
-  font.tickslab = 14,
-  font.legend = 14,
+  font.x = 22,
+  font.y = 22,
+  font.tickslab = 22,
+  font.legend = 22,
   risk.table.fontsize = 8
 )
 ggsurv$table <- ggsurv$table +
   theme(axis.ticks.y = element_blank(),
+        axis.text.y.left = element_text(size = 22),
+        plot.title = element_text(size = 22),
         legend.position = "none")
+
+ggsurv$plot <- ggsurv$plot + 
+  guides(color = guide_legend(override.aes = list(size = 3)))
 
 KMSA_R1_DOS <-
   ggarrange(
@@ -949,8 +999,9 @@ KMSA_R1_DOS <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\KMSA_R1_DOS.png"),
   plot = KMSA_R1_DOS,
-  width = 15,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 ###############################################################################
 ###############################################################################
@@ -997,15 +1048,20 @@ ggsurv <-  ggsurvplot(
   ylab = "Išgyvenimo tikimybė",
   pval = TRUE,
   pval.method = TRUE,
-  font.x = 16,
-  font.y = 16,
-  font.tickslab = 14,
-  font.legend = 14,
+  font.x = 22,
+  font.y = 22,
+  font.tickslab = 22,
+  font.legend = 22,
   risk.table.fontsize = 8
 )
 ggsurv$table <- ggsurv$table +
   theme(axis.ticks.y = element_blank(),
+        axis.text.y.left = element_text(size = 22),
+        plot.title = element_text(size = 22),
         legend.position = "none")
+
+ggsurv$plot <- ggsurv$plot + 
+  guides(color = guide_legend(nrow = 2, byrow = TRUE, override.aes = list(size = 3)))
 
 KMSA_GLpoRPISUP_DOS <-
   ggarrange(
@@ -1020,8 +1076,9 @@ KMSA_GLpoRPISUP_DOS <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\KMSA_GLpoRPISUP_DOS.png"),
   plot = KMSA_GLpoRPISUP_DOS,
-  width = 15,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 ###############################################################################
 ###############################################################################
@@ -1068,13 +1125,13 @@ Pries_ir_Po_lyginimo <-
       ylab(ylab) +
       labs(fill = "Limfmazgių būklė") +
       theme(
-        axis.text.x = element_text(size = 13),
-        axis.text.y = element_text(size = 13),
-        axis.title.x = element_text(size = 16),
-        axis.title.y = element_text(size = 16),
-        legend.text = element_text(size = 13),
-        legend.title = element_text(size = 16),
-        strip.text = element_text(size = 16)
+        axis.text.x = element_text(size = 22),
+        axis.text.y = element_text(size = 22),
+        axis.title.x = element_text(size = 22),
+        axis.title.y = element_text(size = 22),
+        legend.text = element_text(size = 22),
+        legend.title = element_text(size = 22),
+        strip.text = element_text(size = 22)
       ) +
       scale_fill_brewer(palette = "Dark2", labels = legend_text) +
       ggtitle(element_blank())
@@ -1181,8 +1238,9 @@ pries_po_PolinkioBalas <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\pries_po_PolinkioBalas.png"),
   plot = pries_po_PolinkioBalas,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 # Prieš ir po lyginimo stebinių dalis pagal patologinę stadiją pT
 pries_po_pT <-
@@ -1196,8 +1254,9 @@ pries_po_pT <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\pries_po_pT.png"),
   plot = pries_po_pT,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 # Prieš ir po lyginimo stebinių dalis pagal limfmazgių skaičių GLpoRP_ISUP
 pries_po_GLpoRPISUP <-
@@ -1211,8 +1270,9 @@ pries_po_GLpoRPISUP <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\pries_po_GLpoRPISUP.png"),
   plot = pries_po_GLpoRPISUP,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 # Prieš ir po lyginimo stebinių dalis pagal paciento amžių
 pries_po_Amzius <-
@@ -1226,8 +1286,9 @@ pries_po_Amzius <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\pries_po_Amzius.png"),
   plot = pries_po_Amzius,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 
 kintamuju_pavadinimai <-
@@ -1277,19 +1338,20 @@ pries_po_Bendras <-
     title = ""
   )  +
   theme(
-    axis.text.x = element_text(size = 13),
-    axis.text.y = element_text(size = 13),
-    axis.title.x = element_text(size = 16),
-    axis.title.y = element_text(size = 16),
-    legend.text = element_text(size = 13),
-    legend.title = element_text(size = 16)
+    axis.text.x = element_text(size = 22),
+    axis.text.y = element_text(size = 22),
+    axis.title.x = element_text(size = 22),
+    axis.title.y = element_text(size = 22),
+    legend.text = element_text(size = 22),
+    legend.title = element_text(size = 22)
   ) +
   xlab("Absoliutus Standartizuotų Vidurkių Skirtumas")
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\pries_po_Bendras.png"),
   plot = pries_po_Bendras,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 
 
@@ -1396,13 +1458,14 @@ pries_po_PolinkioBalas_2 <-
     "distance",
     "Polinkio balas (tikimybė)",
     "Tankis",
-    c("2 - Limfmazgiai nešalinti", "{0, 1}")
+    c("2 - Limfmazgiai nešalinti", "{0, 1} - švarūs/pažeisti")
   )
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\pries_po_PolinkioBalas_2.png"),
   plot = pries_po_PolinkioBalas_2,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 # Prieš ir po lyginimo stebinių dalis pagal patologinę stadiją pT
 pries_po_pT_2 <-
@@ -1411,13 +1474,14 @@ pries_po_pT_2 <-
     "pT",
     "pT, Patologinė stadija",
     "Imties dalis",
-    c("2 - Limfmazgiai nešalinti", "{0, 1}")
+    c("2 - Limfmazgiai nešalinti", "{0, 1} - švarūs/pažeisti")
   )
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\pries_po_pT_2.png"),
   plot = pries_po_pT_2,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 # Prieš ir po lyginimo stebinių dalis pagal limfmazgių skaičių GLpoRP_ISUP
 pries_po_GLpoRPISUP_2 <-
@@ -1426,13 +1490,14 @@ pries_po_GLpoRPISUP_2 <-
     "GLpoRP_ISUP",
     "GLpoRP_ISUP, Limfmazgių skaičius",
     "Imties dalis",
-    c("2 - Limfmazgiai nešalinti", "{0, 1}")
+    c("2 - Limfmazgiai nešalinti", "{0, 1} - švarūs/pažeisti")
   )
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\pries_po_GLpoRPISUP_2.png"),
   plot = pries_po_GLpoRPISUP_2,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 # Prieš ir po lyginimo stebinių dalis pagal paciento amžių
 pries_po_PSA_2 <-
@@ -1441,13 +1506,14 @@ pries_po_PSA_2 <-
     "PSAI",
     "PSA, prostatos specifiniai antigenai",
     "Tankis",
-    c("2 - Limfmazgiai nešalinti", "{0, 1}")
+    c("2 - Limfmazgiai nešalinti", "{0, 1} - švarūs/pažeisti")
   )
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\pries_po_PSA_2.png"),
   plot = pries_po_PSA_2,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 
 kintamuju_pavadinimai <-
@@ -1497,19 +1563,20 @@ pries_po_Bendras_2 <-
     title = ""
   )  +
   theme(
-    axis.text.x = element_text(size = 13),
-    axis.text.y = element_text(size = 13),
-    axis.title.x = element_text(size = 16),
-    axis.title.y = element_text(size = 16),
-    legend.text = element_text(size = 13),
-    legend.title = element_text(size = 16)
+    axis.text.x = element_text(size = 22),
+    axis.text.y = element_text(size = 22),
+    axis.title.x = element_text(size = 22),
+    axis.title.y = element_text(size = 22),
+    legend.text = element_text(size = 22),
+    legend.title = element_text(size = 22)
   ) +
   xlab("Absoliutus Standartizuotų Vidurkių Skirtumas")
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\pries_po_Bendras_2.png"),
   plot = pries_po_Bendras_2,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 
 # Gauname naują homogenizuotą duomenų imtį pagal LNI01 {0,1 ir 2}
@@ -1546,59 +1613,57 @@ Statistine_Lentele <-
 ###############################################################################
 # Tikriname ar kintamieji pasiskirstę normaliuoju skirstiniu
 ###############################################################################
-# Shapiro-Wilks test'as Amžiaus kintamąjam
-shapiro.test(homogeniai_duomenys$Amzius)
-# Kolmogorov-Smirnov test'as Amžiaus kintamąjam
-ks.test(
-  homogeniai_duomenys$Amzius,
-  "pnorm",
-  mean = mean(homogeniai_duomenys$Amzius),
-  sd = sd(homogeniai_duomenys$Amzius)
-)
-normalumas_amzius <-
-  ggqqplot(homogeniai_duomenys$Amzius,
+# Shapiro-Wilks test'as Amžiaus kintamąjam pagal limfmazgių skaičių
+with(homogeniai_duomenys, tapply(Amzius, LNI01, shapiro.test))
+# Kolmogorov-Smirnov test'as Amžiaus kintamąjam pagal limfmazgių skaičių
+with(homogeniai_duomenys, tapply(Amzius, LNI01, ks.test, y = "pnorm", mean = mean(Amzius), sd = sd(Amzius)))
+normalumas_amzius <- 
+  ggqqplot(data = homogeniai_duomenys,
+           x = "Amzius",
            size = 2,
            conf.int.level = 0.99) +
   xlab("Teoriniai kvantiliai") +
   ylab("Imties kvantiliai")  +
   theme(
-    axis.text.x = element_text(size = 13),
-    axis.text.y = element_text(size = 13),
-    axis.title.x = element_text(size = 16),
-    axis.title.y = element_text(size = 16)
-  )
+    axis.text.x = element_text(size = 22),
+    axis.text.y = element_text(size = 22),
+    axis.title.x = element_text(size = 22),
+    axis.title.y = element_text(size = 22),
+    strip.text = element_text(size = 22)
+  ) + 
+  facet_wrap(.~LNI01)
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\normalumas_amzius.png"),
   plot = normalumas_amzius,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
-# Shapiro-Wilks test'as PSAI kintamąjam
-shapiro.test(homogeniai_duomenys$PSAI)
-# Kolmogorov-Smirnov test'as PSAI kintamąjam
-ks.test(
-  homogeniai_duomenys$PSAI,
-  "pnorm",
-  mean = mean(homogeniai_duomenys$PSAI),
-  sd = sd(homogeniai_duomenys$PSAI)
-)
+# Shapiro-Wilks test'as PSAI kintamąjam pagal limfmazgių skaičių
+with(homogeniai_duomenys, tapply(PSAI, LNI01, shapiro.test))
+# Kolmogorov-Smirnov test'as PSAI kintamąjam pagal limfmazgių skaičių
+with(homogeniai_duomenys, tapply(PSAI, LNI01, ks.test, y = "pnorm", mean = mean(PSAI), sd = sd(PSAI)))
 normalumas_psai <-
-  ggqqplot(homogeniai_duomenys$PSAI,
+  ggqqplot(data = homogeniai_duomenys,
+           x = "PSAI",
            size = 2,
            conf.int.level = 0.99) +
   xlab("Teoriniai kvantiliai") +
   ylab("Imties kvantiliai")  +
   theme(
-    axis.text.x = element_text(size = 13),
-    axis.text.y = element_text(size = 13),
-    axis.title.x = element_text(size = 16),
-    axis.title.y = element_text(size = 16)
-  )
+    axis.text.x = element_text(size = 22),
+    axis.text.y = element_text(size = 22),
+    axis.title.x = element_text(size = 22),
+    axis.title.y = element_text(size = 22),
+    strip.text = element_text(size = 22)
+  ) + 
+  facet_wrap(.~LNI01)
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\normalumas_psai.png"),
   plot = normalumas_psai,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 
 knitr::kable(Statistine_Lentele(homogeniai_duomenys, "Amzius", "LNI01"))
@@ -1636,19 +1701,20 @@ PW_amzius <-
     caption = get_pwc_label(PairwiseComparison_Amzius)
   )  +
   theme(
-    axis.text.x = element_text(size = 13),
-    axis.text.y = element_text(size = 13),
-    axis.title.x = element_text(size = 16),
-    axis.title.y = element_text(size = 16),
-    plot.subtitle = element_text(size = 16),
-    plot.caption = element_text(size = 16)
+    axis.text.x = element_text(size = 22),
+    axis.text.y = element_text(size = 22),
+    axis.title.x = element_text(size = 22),
+    axis.title.y = element_text(size = 22),
+    plot.subtitle = element_text(size = 22),
+    plot.caption = element_text(size = 22)
   )
 
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\PW_amzius.png"),
   plot = PW_amzius,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 
 
@@ -1676,19 +1742,20 @@ PW_PSAI <- ggboxplot(homogeniai_duomenys, x = "LNI01", y = "PSAI") +
     caption = get_pwc_label(PairwiseComparison_PSAI)
   )  +
   theme(
-    axis.text.x = element_text(size = 13),
-    axis.text.y = element_text(size = 13),
-    axis.title.x = element_text(size = 16),
-    axis.title.y = element_text(size = 16),
-    plot.subtitle = element_text(size = 16),
-    plot.caption = element_text(size = 16)
+    axis.text.x = element_text(size = 22),
+    axis.text.y = element_text(size = 22),
+    axis.title.x = element_text(size = 22),
+    axis.title.y = element_text(size = 22),
+    plot.subtitle = element_text(size = 22),
+    plot.caption = element_text(size = 22)
   )
 
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\PW_PSAI.png"),
   plot = PW_PSAI,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 
 ###############################################################################
@@ -1981,10 +2048,12 @@ roc_cox_vs_finegray_apmokymo <- ggroc(list(Cox = cox_roc_apmokymo,
   geom_abline() +
   theme_minimal() +
   theme(
-    axis.text.x = element_text(size = 13),
-    axis.text.y = element_text(size = 13),
-    axis.title.x = element_text(size = 16),
-    axis.title.y = element_text(size = 16)
+    axis.text.x = element_text(size = 22),
+    axis.text.y = element_text(size = 22),
+    axis.title.x = element_text(size = 22),
+    axis.title.y = element_text(size = 22),
+    legend.text = element_text(size = 22),
+    legend.title = element_text(size = 22)
   ) +
   scale_color_brewer(palette = "Dark2") +
   geom_line(size = 2) +
@@ -1996,8 +2065,9 @@ ggsave(
     "\\roc_cox_vs_finegray_apmokymo.png"
   ),
   plot = roc_cox_vs_finegray_apmokymo,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 
 
@@ -2021,10 +2091,12 @@ roc_cox_vs_finegray_testavimo <- ggroc(list(Cox = cox_roc_testavimo,
   geom_abline() +
   theme_minimal() +
   theme(
-    axis.text.x = element_text(size = 13),
-    axis.text.y = element_text(size = 13),
-    axis.title.x = element_text(size = 16),
-    axis.title.y = element_text(size = 16)
+    axis.text.x = element_text(size = 22),
+    axis.text.y = element_text(size = 22),
+    axis.title.x = element_text(size = 22),
+    axis.title.y = element_text(size = 22),
+    legend.text = element_text(size = 22),
+    legend.title = element_text(size = 22)
   ) +
   scale_color_brewer(palette = "Dark2") +
   geom_line(size = 2) +
@@ -2036,8 +2108,9 @@ ggsave(
     "\\roc_cox_vs_finegray_testavimo.png"
   ),
   plot = roc_cox_vs_finegray_testavimo,
-  width = 14,
-  height = 8
+  width = 17,
+  height = 8,
+  units = c("in")
 )
 ```
  
