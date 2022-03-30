@@ -469,10 +469,10 @@ Bendra_lentele <- NULL
 # Susigeneruojame išgyvenimo funkcijas
 fit <-
   survfit(
-    Surv(Survival_years, CSS) ~ Pathologic_stage,
+    Surv(Survival_years, CSS) ~ pT,
     data = sutvarkyti_duomenys %>%
-      mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-      rename(Pathologic_stage = pT),
+      mutate_if(is.factor, ~ as.numeric(as.character(.x))),# %>%
+      #rename(Pathologic_stage = pT),
     conf.int = 0.95
   )
 
@@ -491,9 +491,9 @@ survdiff(
 ggsurv <-  ggsurvplot(
   fit,
   data = sutvarkyti_duomenys %>%
-    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-    rename(Pathologic_stage = pT),
-  palette = "lancet",
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))),# %>%
+    #rename(Pathologic_stage = pT),
+  #palette = "lancet",
   risk.table = TRUE,
   risk.table.title = "Patients at risk",#"Pacientų sk. rizikoje",
   tables.col = "strata",
@@ -506,7 +506,14 @@ ggsurv <-  ggsurvplot(
   font.y = 22,
   font.tickslab = 22,
   font.legend = 22,
-  risk.table.fontsize = 8
+  risk.table.fontsize = 8,
+  add.all = T,
+  #ylim = c(0.5, 1),
+  palette = c("#1B1919FF", "#00468BFF", "#ED0000FF", "#42B540FF"),
+  size = 2,
+  censor.shape = 124,
+  censor.size = 4.5,
+  pval.coord = c(0, 0.55)
 )
 ggsurv$table <- ggsurv$table +
   theme(axis.ticks.y = element_blank(),
@@ -515,7 +522,10 @@ ggsurv$table <- ggsurv$table +
         legend.position = "none")
 
 ggsurv$plot <- ggsurv$plot + 
-  guides(color = guide_legend(override.aes = list(size = 3)))
+  guides(color = guide_legend(override.aes = list(size = 3))) +
+  theme(legend.position = "none") +
+  coord_cartesian(ylim = c(0.5, 1),
+                  xlim = c(0, 16))
 
 KMSA_pT_CSS <-
   ggarrange(
@@ -530,7 +540,7 @@ KMSA_pT_CSS <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\KMSA_pT_CSS.png"),
   plot = KMSA_pT_CSS,
-  width = 17,
+  width = 11,
   height = 8,
   units = c("in")
 )
@@ -546,10 +556,10 @@ ggsave(
 # Susigeneruojame išgyvenimo funkcijas
 fit <-
   survfit(
-    Surv(Survival_years, CSS) ~ Lymph_nodes_status,
+    Surv(Survival_years, CSS) ~ pN,
     data = sutvarkyti_duomenys %>%
       mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-      rename(Lymph_nodes_status  = LNI01),
+      rename(pN  = LNI01),
     conf.int = 0.95
   )
 
@@ -561,18 +571,18 @@ Bendra_lentele <- Bendra_lentele %>%
 
 # Tikriname skirtumą tarp grupių
 survdiff(
-  Surv(Survival_years, CSS) ~ Limfmazgių_būklė,
+  Surv(Survival_years, CSS) ~ pN,
   data = sutvarkyti_duomenys %>%
     mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-    rename(Limfmazgių_būklė  = LNI01)
+    rename(pN  = LNI01)
 )
 # Išgyvenimo funkciją pateikiame vizualizacijoje
 ggsurv <-  ggsurvplot(
   fit,
   data = sutvarkyti_duomenys %>%
     mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-    rename(Lymph_nodes_status  = LNI01),
-  palette = "lancet",
+    rename(pN  = LNI01),
+  #palette = "lancet",
   risk.table = TRUE,
   risk.table.title = "Patients at risk",#"Pacientų sk. rizikoje",
   tables.col = "strata",
@@ -585,7 +595,14 @@ ggsurv <-  ggsurvplot(
   font.y = 22,
   font.tickslab = 22,
   font.legend = 22,
-  risk.table.fontsize = 8
+  risk.table.fontsize = 8,
+  add.all = T,
+  #ylim = c(0.5, 1),
+  palette = c("#1B1919FF", "#00468BFF", "#ED0000FF", "#42B540FF"),
+  size = 2,
+  censor.shape = 124,
+  censor.size = 4.5,
+  pval.coord = c(0, 0.55)
 )
 ggsurv$table <- ggsurv$table +
   theme(axis.ticks.y = element_blank(),
@@ -594,7 +611,10 @@ ggsurv$table <- ggsurv$table +
         legend.position = "none")
 
 ggsurv$plot <- ggsurv$plot + 
-  guides(color = guide_legend(override.aes = list(size = 3)))
+  guides(color = guide_legend(override.aes = list(size = 3))) +
+  theme(legend.position = "none") +
+  coord_cartesian(ylim = c(0.5, 1),
+                  xlim = c(0, 16))
 
 KMSA_LNI01_CSS <-
   ggarrange(
@@ -609,7 +629,7 @@ KMSA_LNI01_CSS <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\KMSA_LNI01_CSS.png"),
   plot = KMSA_LNI01_CSS,
-  width = 17,
+  width = 11,
   height = 8,
   units = c("in")
 )
@@ -624,10 +644,10 @@ ggsave(
 # Susigeneruojame išgyvenimo funkcijas
 fit <-
   survfit(
-    Surv(Survival_years, CSS) ~ Surgical_margin_status,
+    Surv(Survival_years, CSS) ~ SM,
     data = sutvarkyti_duomenys %>%
       mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-      rename(Surgical_margin_status  = R1),
+      rename(SM  = R1),
     conf.int = 0.95
   )
 
@@ -639,18 +659,18 @@ Bendra_lentele <- Bendra_lentele %>%
 
 # Tikriname skirtumą tarp grupių
 survdiff(
-  Surv(Survival_years, CSS) ~ Pašalintų_kraštų_būklė,
+  Surv(Survival_years, CSS) ~ SM,
   data = sutvarkyti_duomenys %>%
     mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-    rename(Pašalintų_kraštų_būklė  = R1)
+    rename(SM  = R1)
 )
 # Išgyvenimo funkciją pateikiame vizualizacijoje
 ggsurv <-  ggsurvplot(
   fit,
   data = sutvarkyti_duomenys %>%
     mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-    rename(Surgical_margin_status  = R1),
-  palette = "lancet",
+    rename(SM  = R1),
+  #palette = "lancet",
   risk.table = TRUE,
   risk.table.title = "Patients at risk",#"Pacientų sk. rizikoje",
   tables.col = "strata",
@@ -663,7 +683,14 @@ ggsurv <-  ggsurvplot(
   font.y = 22,
   font.tickslab = 22,
   font.legend = 22,
-  risk.table.fontsize = 8
+  risk.table.fontsize = 8,
+  add.all = T,
+  #ylim = c(0.5, 1),
+  palette = c("#1B1919FF", "#00468BFF", "#ED0000FF", "#42B540FF"),
+  size = 2,
+  censor.shape = 124,
+  censor.size = 4.5,
+  pval.coord = c(0, 0.55)
 )
 ggsurv$table <- ggsurv$table +
   theme(axis.ticks.y = element_blank(),
@@ -672,7 +699,10 @@ ggsurv$table <- ggsurv$table +
         legend.position = "none")
 
 ggsurv$plot <- ggsurv$plot + 
-  guides(color = guide_legend(override.aes = list(size = 3)))
+  guides(color = guide_legend(override.aes = list(size = 3))) +
+  theme(legend.position = "none") +
+  coord_cartesian(ylim = c(0.5, 1),
+                  xlim = c(0, 16))
 
 KMSA_R1_CSS <-
   ggarrange(
@@ -687,7 +717,7 @@ KMSA_R1_CSS <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\KMSA_R1_CSS.png"),
   plot = KMSA_R1_CSS,
-  width = 17,
+  width = 11,
   height = 8,
   units = c("in")
 )
@@ -701,10 +731,10 @@ ggsave(
 # Susigeneruojame išgyvenimo funkcijas
 fit <-
   survfit(
-    Surv(Survival_years, CSS) ~ Metastatic_lymph_nodes,
+    Surv(Survival_years, CSS) ~ GG,
     data = sutvarkyti_duomenys %>%
       mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-      rename(Metastatic_lymph_nodes = GLpoRP_ISUP),
+      rename(GG = GLpoRP_ISUP),
     conf.int = 0.95
   )
 
@@ -716,18 +746,18 @@ Bendra_lentele <- Bendra_lentele %>%
 
 # Tikriname skirtumą tarp grupių
 survdiff(
-  Surv(Survival_years, CSS) ~ Limfmazgių_skaičius,
+  Surv(Survival_years, CSS) ~ GG,
   data = sutvarkyti_duomenys %>%
     mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-    rename(Limfmazgių_skaičius = GLpoRP_ISUP)
+    rename(GG = GLpoRP_ISUP)
 )
 # Išgyvenimo funkciją pateikiame vizualizacijoje
 ggsurv <-  ggsurvplot(
   fit,
   data = sutvarkyti_duomenys %>%
     mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-    rename(Metastatic_lymph_nodes = GLpoRP_ISUP),
-  palette = "lancet",
+    rename(GG = GLpoRP_ISUP),
+  #palette = "lancet",
   risk.table = TRUE,
   risk.table.title = "Patients at risk",#"Pacientų sk. rizikoje",
   tables.col = "strata",
@@ -740,7 +770,14 @@ ggsurv <-  ggsurvplot(
   font.y = 22,
   font.tickslab = 22,
   font.legend = 20,
-  risk.table.fontsize = 8
+  risk.table.fontsize = 8,
+  add.all = T,
+  #ylim = c(0.5, 1),
+  palette = c("#1B1919FF", "#00468BFF", "#ED0000FF", "#42B540FF", "#0099B4FF", "#925E9FFF"),
+  size = 2,
+  censor.shape = 124,
+  censor.size = 4.5,
+  pval.coord = c(0, 0.55)
 )
 ggsurv$table <- ggsurv$table +
   theme(axis.ticks.y = element_blank(),
@@ -749,7 +786,10 @@ ggsurv$table <- ggsurv$table +
         legend.position = "none")
 
 ggsurv$plot <- ggsurv$plot + 
-  guides(color = guide_legend(nrow = 2, byrow = TRUE, override.aes = list(size = 3)))
+  guides(color = guide_legend(nrow = 2, byrow = TRUE, override.aes = list(size = 3))) +
+  theme(legend.position = "none") +
+  coord_cartesian(ylim = c(0.5, 1),
+                  xlim = c(0, 16))
 
 KMSA_GLpoRPISUP_CSS <-
   ggarrange(
@@ -764,7 +804,7 @@ KMSA_GLpoRPISUP_CSS <-
 ggsave(
   paste0(Vizualizaciju_Aplankas, "\\KMSA_GLpoRPISUP_CSS.png"),
   plot = KMSA_GLpoRPISUP_CSS,
-  width = 17,
+  width = 11,
   height = 8,
   units = c("in")
 )
@@ -2386,4 +2426,3 @@ ggsave(
   units = c("in")
 )
 ```
- 
