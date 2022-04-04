@@ -507,9 +507,9 @@ ggsurv <-  ggsurvplot(
   font.tickslab = 22,
   font.legend = 22,
   risk.table.fontsize = 8,
-  add.all = T,
+  #add.all = T,
   #ylim = c(0.5, 1),
-  palette = c("#1B1919FF", "#00468BFF", "#ED0000FF", "#42B540FF"),
+  palette = c("#00468BFF", "#ED0000FF", "#42B540FF"),
   size = 2,
   censor.shape = 124,
   censor.size = 4.5,
@@ -596,9 +596,9 @@ ggsurv <-  ggsurvplot(
   font.tickslab = 22,
   font.legend = 22,
   risk.table.fontsize = 8,
-  add.all = T,
+  #add.all = T,
   #ylim = c(0.5, 1),
-  palette = c("#1B1919FF", "#00468BFF", "#ED0000FF", "#42B540FF"),
+  palette = c("#00468BFF", "#ED0000FF", "#42B540FF"),
   size = 2,
   censor.shape = 124,
   censor.size = 4.5,
@@ -684,9 +684,9 @@ ggsurv <-  ggsurvplot(
   font.tickslab = 22,
   font.legend = 22,
   risk.table.fontsize = 8,
-  add.all = T,
+  #add.all = T,
   #ylim = c(0.5, 1),
-  palette = c("#1B1919FF", "#00468BFF", "#ED0000FF", "#42B540FF"),
+  palette = c("#00468BFF", "#ED0000FF", "#42B540FF"),
   size = 2,
   censor.shape = 124,
   censor.size = 4.5,
@@ -771,9 +771,9 @@ ggsurv <-  ggsurvplot(
   font.tickslab = 22,
   font.legend = 20,
   risk.table.fontsize = 8,
-  add.all = T,
+  #add.all = T,
   #ylim = c(0.5, 1),
-  palette = c("#1B1919FF", "#00468BFF", "#ED0000FF", "#42B540FF", "#0099B4FF", "#925E9FFF"),
+  palette = c("#00468BFF", "#ED0000FF", "#42B540FF", "#0099B4FF", "#925E9FFF"),
   size = 2,
   censor.shape = 124,
   censor.size = 4.5,
@@ -1138,235 +1138,6 @@ knitr::kable(
 ```
 
 ```{r}
-###############################################################################
-# Prostato vėžio išgyvenimo funkcijos pagal pT
-###############################################################################
-# Susigeneruojame išgyvenimo funkcijas
-fit <-
-  survfit(
-    Surv(Survival_years, CSS) ~ Pathologic_stage,
-    data = sutvarkyti_duomenys %>%
-      mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-      rename(Pathologic_stage = pT),
-    conf.int = 0.95
-  )
-
-# Išgyvenimo funkciją pateikiame vizualizacijoje
-ggsurv <-  ggsurvplot(
-  fit,
-  data = sutvarkyti_duomenys %>%
-    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-    rename(Pathologic_stage = pT),
-  palette = "lancet",
-  risk.table = TRUE,
-  risk.table.title = "Patients at risk",#"Pacientų sk. rizikoje",
-  tables.col = "strata",
-  tables.theme = theme_cleantable(),
-  xlab = "Survival years",#"Stebėjimo laikas (metais)",
-  ylab = "Survival probability",#"Išgyvenimo tikimybė",
-  pval = TRUE,
-  pval.method = TRUE,
-  font.x = 22,
-  font.y = 22,
-  font.tickslab = 22,
-  font.legend = 22,
-  risk.table.fontsize = 8,
-  legend = "none"
-)
-ggsurv$table <- ggsurv$table +
-  theme(axis.ticks.y = element_blank(),
-        axis.text.y.left = element_text(size = 22),
-        plot.title = element_text(size = 22),
-        legend.position = "none")
-
-ggsurv$plot <- ggsurv$plot + 
-  guides(color = guide_legend(override.aes = list(size = 3)))
-
-KMSA_pT_CSS <-
-  ggarrange(
-    ggsurv$plot,
-    ggsurv$table,
-    heights = c(2, 0.7),
-    ncol = 1,
-    nrow = 2,
-    align = "v"
-  )
-
-###############################################################################
-# Prostato vėžio išgyvenimo funkcijos pagal LNI01
-###############################################################################
-# Susigeneruojame išgyvenimo funkcijas
-fit <-
-  survfit(
-    Surv(Survival_years, CSS) ~ Lymph_nodes_status,
-    data = sutvarkyti_duomenys %>%
-      mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-      rename(Lymph_nodes_status  = LNI01),
-    conf.int = 0.95
-  )
-
-# Išgyvenimo funkciją pateikiame vizualizacijoje
-ggsurv <-  ggsurvplot(
-  fit,
-  data = sutvarkyti_duomenys %>%
-    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-    rename(Lymph_nodes_status  = LNI01),
-  palette = "lancet",
-  risk.table = TRUE,
-  risk.table.title = "Patients at risk",#"Pacientų sk. rizikoje",
-  tables.col = "strata",
-  tables.theme = theme_cleantable(),
-  xlab = "Survival years",#"Stebėjimo laikas (metais)",
-  ylab = "Survival probability",#"Išgyvenimo tikimybė",
-  pval = TRUE,
-  pval.method = TRUE,
-  font.x = 22,
-  font.y = 22,
-  font.tickslab = 22,
-  font.legend = 22,
-  risk.table.fontsize = 8,
-  legend = "none"
-)
-ggsurv$table <- ggsurv$table +
-  theme(axis.ticks.y = element_blank(),
-        axis.text.y.left = element_text(size = 22),
-        plot.title = element_text(size = 22),
-        legend.position = "none")
-
-ggsurv$plot <- ggsurv$plot + 
-  guides(color = guide_legend(override.aes = list(size = 3)))
-
-KMSA_LNI01_CSS <-
-  ggarrange(
-    ggsurv$plot,
-    ggsurv$table,
-    heights = c(2, 0.7),
-    ncol = 1,
-    nrow = 2,
-    align = "v"
-  )
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-###############################################################################
-# Prostato vėžio išgyvenimo funkcijos pagal R1
-###############################################################################
-# Susigeneruojame išgyvenimo funkcijas
-fit <-
-  survfit(
-    Surv(Survival_years, CSS) ~ Surgical_margin_status,
-    data = sutvarkyti_duomenys %>%
-      mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-      rename(Surgical_margin_status  = R1),
-    conf.int = 0.95
-  )
-
-# Išgyvenimo funkciją pateikiame vizualizacijoje
-ggsurv <-  ggsurvplot(
-  fit,
-  data = sutvarkyti_duomenys %>%
-    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-    rename(Surgical_margin_status  = R1),
-  palette = "lancet",
-  risk.table = TRUE,
-  risk.table.title = "Patients at risk",#"Pacientų sk. rizikoje",
-  tables.col = "strata",
-  tables.theme = theme_cleantable(),
-  xlab = "Survival years",#"Stebėjimo laikas (metais)",
-  ylab = "Survival probability",#"Išgyvenimo tikimybė",
-  pval = TRUE,
-  pval.method = TRUE,
-  font.x = 22,
-  font.y = 22,
-  font.tickslab = 22,
-  font.legend = 22,
-  risk.table.fontsize = 8,
-  legend = "none"
-)
-ggsurv$table <- ggsurv$table +
-  theme(axis.ticks.y = element_blank(),
-        axis.text.y.left = element_text(size = 22),
-        plot.title = element_text(size = 22),
-        legend.position = "none")
-
-ggsurv$plot <- ggsurv$plot + 
-  guides(color = guide_legend(override.aes = list(size = 3)))
-
-KMSA_R1_CSS <-
-  ggarrange(
-    ggsurv$plot,
-    ggsurv$table,
-    heights = c(2, 0.7),
-    ncol = 1,
-    nrow = 2,
-    align = "v"
-  )
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-###############################################################################
-# Prostato vėžio išgyvenimo funkcijos pagal GLpoRP_ISUP
-###############################################################################
-# Susigeneruojame išgyvenimo funkcijas
-fit <-
-  survfit(
-    Surv(Survival_years, CSS) ~ Metastatic_lymph_nodes,
-    data = sutvarkyti_duomenys %>%
-      mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-      rename(Metastatic_lymph_nodes = GLpoRP_ISUP),
-    conf.int = 0.95
-  )
-
-# Išgyvenimo funkciją pateikiame vizualizacijoje
-ggsurv <-  ggsurvplot(
-  fit,
-  data = sutvarkyti_duomenys %>%
-    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
-    rename(Metastatic_lymph_nodes = GLpoRP_ISUP),
-  palette = "lancet",
-  risk.table = TRUE,
-  risk.table.title = "Patients at risk",#"Pacientų sk. rizikoje",
-  tables.col = "strata",
-  tables.theme = theme_cleantable(),
-  xlab = "Survival years",#"Stebėjimo laikas (metais)",
-  ylab = "Survival probability",#"Išgyvenimo tikimybė",
-  pval = TRUE,
-  pval.method = TRUE,
-  font.x = 22,
-  font.y = 22,
-  font.tickslab = 22,
-  font.legend = 20,
-  risk.table.fontsize = 8,
-  legend = "none"
-)
-ggsurv$table <- ggsurv$table +
-  theme(axis.ticks.y = element_blank(),
-        axis.text.y.left = element_text(size = 22),
-        plot.title = element_text(size = 22),
-        legend.position = "none")
-
-ggsurv$plot <- ggsurv$plot + 
-  guides(color = guide_legend(nrow = 2, byrow = TRUE, override.aes = list(size = 3)))
-
-KMSA_GLpoRPISUP_CSS <-
-  ggarrange(
-    ggsurv$plot,
-    ggsurv$table,
-    heights = c(2, 0.7),
-    ncol = 1,
-    nrow = 2,
-    align = "v"
-  )
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
 KMSA_square_CSS <- 
 ggarrange(
     KMSA_pT_CSS,
@@ -1375,6 +1146,8 @@ ggarrange(
     KMSA_GLpoRPISUP_CSS,
     #heights = c(2, 0.7),
     legend = "none",
+    labels = "AUTO",
+    font.label = list(size = 32),
     ncol = 2,
     nrow = 2,
     align = "v"
@@ -2296,6 +2069,17 @@ finegray <-
 
 summary(finegray$crrFit)
 
+# FG model for PCM
+# Treat time to death and plasma cell malignancy as competing risks
+etime <- apmokymo_imtis$Survival_years#with(apmokymo_imtis, ifelse(pstat==0, futime, ptime))
+event <- with(apmokymo_imtis, ifelse(CSS==0, ifelse(Death_other_causes==0, 0, 2), 1))
+event <- factor(event, 0:2, labels=c("censor", "pcm", "death_other_causes"))
+
+pdata <- finegray(Surv(etime, event) ~ Amzius + PSAI + pT + LNI01 + R1 + GLpoRP_ISUP, data=apmokymo_imtis)
+fgfit <- coxph(Surv(fgstart, fgstop, fgstatus) ~ Amzius + PSAI + pT + LNI01 + R1 + GLpoRP_ISUP,
+                     weight=fgwt, data=pdata)
+cox.zph(fgfit)
+
 # Skaičiuojame tikimybių matricą testavimo imčiai naudodamiesi Fine & Gray modeliu
 finegray_tikimybiu_matrica_apmokymo <-
   predictRisk(finegray, newdata = apmokymo_imtis, times = sort(unique(apmokymo_imtis$Survival_years)))
@@ -2426,3 +2210,12 @@ ggsave(
   units = c("in")
 )
 ```
+
+
+
+
+
+
+
+
+
