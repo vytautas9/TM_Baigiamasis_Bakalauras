@@ -1159,6 +1159,313 @@ ggsave(
   height = 14,
   units = c("in")
 )
+
+
+
+
+# Isskaidau po 2 grafikus
+fit <-
+  survfit(
+    Surv(Survival_years, CSS) ~ pT,
+    data = sutvarkyti_duomenys %>%
+      mutate_if(is.factor, ~ as.numeric(as.character(.x))),# %>%
+      #rename(Pathologic_stage = pT),
+    conf.int = 0.95
+  )
+
+# Išgyvenimo funkciją pateikiame vizualizacijoje
+ggsurv <-  ggsurvplot(
+  fit,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))),# %>%
+    #rename(Pathologic_stage = pT),
+  #palette = "lancet",
+  risk.table = TRUE,
+  risk.table.title = "Patients at risk",#"Pacientų sk. rizikoje",
+  tables.col = "strata",
+  tables.theme = theme_cleantable(),
+  xlab = "Survival years",#"Stebėjimo laikas (metais)",
+  ylab = "Survival probability",#"Išgyvenimo tikimybė",
+  pval = TRUE,
+  pval.method = TRUE,
+  font.x = 24,
+  font.y = 24,
+  font.tickslab = 24,
+  font.legend = 24,
+  risk.table.fontsize = 8,
+  #add.all = T,
+  #ylim = c(0.5, 1),
+  palette = c("#00468BFF", "#ED0000FF", "#42B540FF"),
+  size = 2,
+  censor.shape = 124,
+  censor.size = 4.5,
+  pval.coord = c(0, 0.55)
+)
+ggsurv$table <- ggsurv$table +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y.left = element_text(size = 24),
+        plot.title = element_text(size = 24),
+        legend.position = "none")
+
+ggsurv$plot <- ggsurv$plot + 
+  guides(color = guide_legend(override.aes = list(size = 3))) +
+  theme(legend.position = "none") +
+  coord_cartesian(ylim = c(0.5, 1),
+                  xlim = c(0, 16))
+
+KMSA_pT_CSS <-
+  ggarrange(
+    ggsurv$plot,
+    ggsurv$table,
+    heights = c(2, 0.7),
+    ncol = 1,
+    nrow = 2,
+    align = "v"
+  )
+
+####################################################################
+# Susigeneruojame išgyvenimo funkcijas
+fit <-
+  survfit(
+    Surv(Survival_years, CSS) ~ pN,
+    data = sutvarkyti_duomenys %>%
+      mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+      rename(pN  = LNI01),
+    conf.int = 0.95
+  )
+
+# Išgyvenimo funkciją pateikiame vizualizacijoje
+ggsurv <-  ggsurvplot(
+  fit,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(pN  = LNI01),
+  #palette = "lancet",
+  risk.table = TRUE,
+  risk.table.title = "Patients at risk",#"Pacientų sk. rizikoje",
+  tables.col = "strata",
+  tables.theme = theme_cleantable(),
+  xlab = "Survival years",#"Stebėjimo laikas (metais)",
+  ylab = "Survival probability",#"Išgyvenimo tikimybė",
+  pval = TRUE,
+  pval.method = TRUE,
+  font.x = 24,
+  font.y = 24,
+  font.tickslab = 24,
+  font.legend = 24,
+  risk.table.fontsize = 8,
+  #add.all = T,
+  #ylim = c(0.5, 1),
+  palette = c("#00468BFF", "#ED0000FF", "#42B540FF"),
+  size = 2,
+  censor.shape = 124,
+  censor.size = 4.5,
+  pval.coord = c(0, 0.55)
+)
+ggsurv$table <- ggsurv$table +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y.left = element_text(size = 24),
+        plot.title = element_text(size = 24),
+        legend.position = "none")
+
+ggsurv$plot <- ggsurv$plot + 
+  guides(color = guide_legend(override.aes = list(size = 3))) +
+  theme(legend.position = "none") +
+  coord_cartesian(ylim = c(0.5, 1),
+                  xlim = c(0, 16))
+
+KMSA_LNI01_CSS <-
+  ggarrange(
+    ggsurv$plot,
+    ggsurv$table,
+    heights = c(2, 0.7),
+    ncol = 1,
+    nrow = 2,
+    align = "v"
+  )
+
+
+
+KMSA_square_CSS_1 <- 
+ggarrange(
+    KMSA_pT_CSS,
+    KMSA_LNI01_CSS,
+    #heights = c(2, 0.7),
+    legend = "none",
+    labels = "AUTO",
+    font.label = list(size = 32),
+    ncol = 2,
+    nrow = 1,
+    align = "v"
+  )
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\KMSA_square_CSS_1.png"),
+  plot = KMSA_square_CSS_1,
+  width = 17,
+  height = 7,
+  units = c("in")
+)
+
+
+
+###############################################################################
+# Prostato vėžio išgyvenimo funkcijos pagal R1
+###############################################################################
+# Susigeneruojame išgyvenimo funkcijas
+fit <-
+  survfit(
+    Surv(Survival_years, CSS) ~ SM,
+    data = sutvarkyti_duomenys %>%
+      mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+      rename(SM  = R1),
+    conf.int = 0.95
+  )
+
+# Išgyvenimo funkciją pateikiame vizualizacijoje
+ggsurv <-  ggsurvplot(
+  fit,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(SM  = R1),
+  #palette = "lancet",
+  risk.table = TRUE,
+  risk.table.title = "Patients at risk",#"Pacientų sk. rizikoje",
+  tables.col = "strata",
+  tables.theme = theme_cleantable(),
+  xlab = "Survival years",#"Stebėjimo laikas (metais)",
+  ylab = "Survival probability",#"Išgyvenimo tikimybė",
+  pval = TRUE,
+  pval.method = TRUE,
+  font.x = 24,
+  font.y = 24,
+  font.tickslab = 24,
+  font.legend = 24,
+  risk.table.fontsize = 8,
+  #add.all = T,
+  #ylim = c(0.5, 1),
+  palette = c("#00468BFF", "#ED0000FF", "#42B540FF"),
+  size = 2,
+  censor.shape = 124,
+  censor.size = 4.5,
+  pval.coord = c(0, 0.55)
+)
+ggsurv$table <- ggsurv$table +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y.left = element_text(size = 24),
+        plot.title = element_text(size = 24),
+        legend.position = "none")
+
+ggsurv$plot <- ggsurv$plot + 
+  guides(color = guide_legend(override.aes = list(size = 3))) +
+  theme(legend.position = "none") +
+  coord_cartesian(ylim = c(0.5, 1),
+                  xlim = c(0, 16))
+
+KMSA_R1_CSS <-
+  ggarrange(
+    ggsurv$plot,
+    ggsurv$table,
+    heights = c(2, 0.7),
+    ncol = 1,
+    nrow = 2,
+    align = "v"
+  )
+###############################################################################
+###############################################################################
+###############################################################################
+
+###############################################################################
+# Prostato vėžio išgyvenimo funkcijos pagal GLpoRP_ISUP
+###############################################################################
+# Susigeneruojame išgyvenimo funkcijas
+fit <-
+  survfit(
+    Surv(Survival_years, CSS) ~ GG,
+    data = sutvarkyti_duomenys %>%
+      mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+      rename(GG = GLpoRP_ISUP),
+    conf.int = 0.95
+  )
+
+# Išgyvenimo funkciją pateikiame vizualizacijoje
+ggsurv <-  ggsurvplot(
+  fit,
+  data = sutvarkyti_duomenys %>%
+    mutate_if(is.factor, ~ as.numeric(as.character(.x))) %>%
+    rename(GG = GLpoRP_ISUP),
+  #palette = "lancet",
+  risk.table = TRUE,
+  risk.table.title = "Patients at risk",#"Pacientų sk. rizikoje",
+  tables.col = "strata",
+  tables.theme = theme_cleantable(),
+  xlab = "Survival years",#"Stebėjimo laikas (metais)",
+  ylab = "Survival probability",#"Išgyvenimo tikimybė",
+  pval = TRUE,
+  pval.method = TRUE,
+  font.x = 24,
+  font.y = 24,
+  font.tickslab = 24,
+  font.legend = 24,
+  risk.table.fontsize = 8,
+  #add.all = T,
+  #ylim = c(0.5, 1),
+  palette = c("#00468BFF", "#ED0000FF", "#42B540FF", "#0099B4FF", "#925E9FFF"),
+  size = 2,
+  censor.shape = 124,
+  censor.size = 4.5,
+  pval.coord = c(0, 0.55)
+)
+ggsurv$table <- ggsurv$table +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y.left = element_text(size = 24),
+        plot.title = element_text(size = 24),
+        legend.position = "none")
+
+ggsurv$plot <- ggsurv$plot + 
+  guides(color = guide_legend(nrow = 2, byrow = TRUE, override.aes = list(size = 3))) +
+  theme(legend.position = "none") +
+  coord_cartesian(ylim = c(0.5, 1),
+                  xlim = c(0, 16))
+
+KMSA_GLpoRPISUP_CSS <-
+  ggarrange(
+    ggsurv$plot,
+    ggsurv$table,
+    heights = c(2, 0.7),
+    ncol = 1,
+    nrow = 2,
+    align = "v"
+  )
+
+
+
+KMSA_square_CSS_2 <- 
+ggarrange(
+    KMSA_R1_CSS,
+    KMSA_GLpoRPISUP_CSS,
+    #heights = c(2, 0.7),
+    legend = "none",
+    labels = "AUTO",
+    font.label = list(size = 32),
+    ncol = 2,
+    nrow = 1,
+    align = "v"
+  )
+ggsave(
+  paste0(Vizualizaciju_Aplankas, "\\KMSA_square_CSS_2.png"),
+  plot = KMSA_square_CSS_2,
+  width = 17,
+  height = 8,
+  units = c("in")
+)
+
+
+###############################################################################
+
+
+
+
+
 ```
 
 
